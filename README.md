@@ -54,7 +54,7 @@ npm run preview
 
 ```text
 src/
-	App.jsx
+App.jsx
 	App.css
 	index.css
 	main.jsx
