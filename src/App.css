@@ -101,13 +101,26 @@
   flex-wrap: nowrap;
 }
 
-.image-link-input {
-  flex: 1 1 auto;
-  min-width: 0;
+.form-input {
   padding: 10px 12px;
   border: 1px solid #9fb0d9;
   border-radius: 6px;
+  outline: none;
+  background: #fff;
+  color: #333;
+  font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.form-input:focus {
+  border-color: #00b4e0;
+  box-shadow: 0 0 0 3px rgba(0, 180, 224, 0.18);
+}
+
+.image-link-input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .image-link-button {

@@ -10,7 +10,7 @@ const ImageLinkForm = ({ error, isLoading, onInputChange, onButtonSubmit }) => {
         <form className="image-link-row" onSubmit={onButtonSubmit}>
           <input
             aria-label="Direct image URL"
-            className="image-link-input"
+            className="form-input image-link-input"
             disabled={isLoading}
             onChange={onInputChange}
             placeholder="https://example.com/photo.jpg"

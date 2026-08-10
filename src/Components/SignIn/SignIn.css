@@ -1,0 +1,46 @@
+.sign-in {
+  width: calc(100% - 40px);
+  max-width: 720px;
+  margin: 84px auto 0;
+}
+
+.sign-in-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.sign-in-form {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sign-in-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sign-in-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.sign-in-input {
+  width: 100%;
+}
+
+.sign-in-button {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+@media (max-width: 680px) {
+  .sign-in {
+    width: calc(100% - 20px);
+    margin-top: 78px;
+  }
+}

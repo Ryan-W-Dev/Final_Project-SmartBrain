@@ -7,6 +7,7 @@ import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
 import { particleConfig } from './Components/ParticlesConfig/particlesConfig';
 import FaceRecognition from './Components/FaceRecognition/FaceRecognition';
+import SignIn from './Components/SignIn/SignIn';
 
 class App extends Component {
   constructor() {
@@ -136,6 +137,7 @@ class App extends Component {
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
           <Navigation />
+          <SignIn />
           <div className="hero">
             <section className="control-card" aria-label="Image detection controls">
               <Logo />
