@@ -4,11 +4,11 @@ import Logo from './Components/Logo/Logo';
 import ImageLinkForm from './Components/ImageLinkForm/ImageLinkForm';
 import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
-import { useParticleConfig } from './Components/ParticlesConfig/ParticlesConfig';
+import { particleConfig } from './Components/ParticlesConfig/particlesConfig';
 
 const App = () => (
   <div className="app-root">
-    <ParticlesBg type="cobweb" config={useParticleConfig()} bg={true} />
+    <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
     <div className="app-shell">
       <Navigation />
       <div className="hero">
