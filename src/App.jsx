@@ -4,7 +4,7 @@ import Logo from './Components/Logo/Logo';
 import ImageLinkForm from './Components/ImageLinkForm/ImageLinkForm';
 import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
-import { useParticleConfig } from './particlesConfig';
+import { useParticleConfig } from './Components/ParticlesConfig/ParticlesConfig';
 
 function App() {
   const particleConfig = useParticleConfig();
