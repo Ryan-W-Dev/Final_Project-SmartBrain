@@ -1,7 +1,14 @@
+.sign-in-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 84px 20px 40px;
+  place-items: center;
+}
+
 .sign-in {
-  width: calc(100% - 40px);
+  width: 100%;
   max-width: 720px;
-  margin: 84px auto 0;
+  margin: 0;
 }
 
 .sign-in-title {
@@ -33,14 +40,20 @@
   width: 100%;
 }
 
-.sign-in-button {
-  align-self: flex-start;
+.sign-in-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
   margin-top: 2px;
 }
 
+.sign-in-button {
+  min-width: 108px;
+}
+
 @media (max-width: 680px) {
-  .sign-in {
-    width: calc(100% - 20px);
-    margin-top: 78px;
+  .sign-in-page {
+    padding: 78px 10px 24px;
   }
 }

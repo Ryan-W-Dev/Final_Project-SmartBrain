@@ -19,6 +19,7 @@ class App extends Component {
       detections: [],
       error: '',
       isLoading: false,
+      route: 'signin', // Default route is 'signin'
     };
   }
 
@@ -131,30 +132,37 @@ class App extends Component {
     }
   };
 
+  onRouteChange = (route) => {
+    this.setState({ route });
+  };
+
   render() {
     return (
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
           <Navigation />
-          <SignIn />
-          <div className="hero">
-            <section className="control-card" aria-label="Image detection controls">
-              <Logo />
-              <Rank />
-              <ImageLinkForm
-                error={this.state.error}
-                isLoading={this.state.isLoading}
-                onInputChange={this.onInputChange}
-                onButtonSubmit={this.onButtonSubmit}
+          {this.state.route === 'signin' ? (
+            <SignIn onRouteChange={this.onRouteChange} />
+          ) : (
+            <div className="hero">
+              <section className="control-card" aria-label="Image detection controls">
+                <Logo />
+                <Rank />
+                <ImageLinkForm
+                  error={this.state.error}
+                  isLoading={this.state.isLoading}
+                  onInputChange={this.onInputChange}
+                  onButtonSubmit={this.onButtonSubmit}
+                />
+              </section>
+              <FaceRecognition
+                boxes={this.state.boxes}
+                imageUrl={this.state.imageUrl}
+                onImageLoad={this.onImageLoad}
               />
-            </section>
-            <FaceRecognition
-              boxes={this.state.boxes}
-              imageUrl={this.state.imageUrl}
-              onImageLoad={this.onImageLoad}
-            />
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );
