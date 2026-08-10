@@ -144,32 +144,29 @@ class App extends Component {
   };
 
   render() {
+    const { isSignedIn, route, boxes, imageUrl, error, isLoading } = this.state;
     return (
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
-          <Navigation isSignedIn={this.state.isSignedIn} onRouteChange={this.onRouteChange} />
-          {this.state.route === 'home' ? (
+          <Navigation isSignedIn={isSignedIn} onRouteChange={this.onRouteChange} />
+          {route === 'home' ? (
             <div className="hero">
               <section className="control-card" aria-label="Image detection controls">
                 <Logo />
                 <Rank />
                 <ImageLinkForm
-                  error={this.state.error}
-                  isLoading={this.state.isLoading}
+                  error={error}
+                  isLoading={isLoading}
                   onInputChange={this.onInputChange}
                   onButtonSubmit={this.onButtonSubmit}
                 />
               </section>
-              <FaceRecognition
-                boxes={this.state.boxes}
-                imageUrl={this.state.imageUrl}
-                onImageLoad={this.onImageLoad}
-              />
+              <FaceRecognition boxes={boxes} imageUrl={imageUrl} onImageLoad={this.onImageLoad} />
             </div>
-          ) : this.state.route === 'signin' ? (
+          ) : route === 'signin' ? (
             <SignIn onRouteChange={this.onRouteChange} />
-          ) : this.state.route === 'register' ? (
+          ) : route === 'register' ? (
             <Register onRouteChange={this.onRouteChange} />
           ) : null}
         </div>
