@@ -1,17 +1,40 @@
-import { useState } from 'react';
 import './App.css';
 import Navigation from './Components/Navigation/Navigation';
 import Logo from './Components/Logo/Logo';
 import ImageLinkForm from './Components/ImageLinkForm/ImageLinkForm';
+import Rank from './Components/Rank/Rank';
+import ParticlesBg from 'particles-bg';
+
+const config = {
+  num: [4, 7],
+  rps: 0.1,
+  radius: [5, 40],
+  life: [1.5, 3],
+  v: [2, 3],
+  tha: [-40, 40],
+  alpha: [0.6, 0],
+  scale: [0.1, 0.4],
+  position: 'all',
+  color: ['random', '#080808'],
+  cross: 'dead',
+  random: 15,
+  onParticleUpdate: (ctx, particle) => {
+    ctx.beginPath();
+    ctx.rect(particle.p.x, particle.p.y, particle.radius * 2, particle.radius * 2);
+    ctx.fillStyle = particle.color;
+    ctx.fill();
+    ctx.closePath();
+  },
+};
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <>
+      <ParticlesBg type="cobweb" config={config} bg={true} />
       <div className="hero">
         <Navigation></Navigation>
         <Logo></Logo>
+        <Rank></Rank>
         <ImageLinkForm></ImageLinkForm>
         {/* <FaceRecognition></FaceRecognition> */}
       </div>
