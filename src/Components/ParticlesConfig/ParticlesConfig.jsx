@@ -1,15 +1,14 @@
-const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 600;
+const isSmallPhone = typeof window !== 'undefined' && window.innerWidth <= 430;
 
 export const particleConfig = {
-  num: isSmallScreen ? [1, 1] : [1, 2],
-  rps: isSmallScreen ? 0.3 : 1,
-  radius: [5, 40],
-  life: [1.5, 3],
-  v: [2, 3],
-  tha: [-40, 40],
-  scale: [1, 5],
+  num: isSmallPhone ? [0, 1] : [4, 6],
+  rps: isSmallPhone ? 0.05 : 0.3,
+  radius: [2, 4],
+  life: [1, 2],
+  v: [0.001, 0.003],
+  tha: [-180, 180],
+  scale: [1, 2],
   position: 'all',
-  color: ['random', '#080808'],
   cross: 'dead',
-  random: isSmallScreen ? 40 : 15,
+  random: 8,
 };
