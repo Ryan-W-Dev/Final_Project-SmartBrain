@@ -1,13 +1,21 @@
 #root {
   position: relative;
   isolation: isolate;
+  z-index: 1;
 }
 
-.particles-bg-canvas-self {
+/* Keep particles-bg canvas/wrapper behind all app content regardless of class variant. */
+.particles-bg-canvas-self,
+[class*="particles-bg-canvas"] {
   position: fixed !important;
-  inset: 0;
-  z-index: -1 !important;
+  inset: 0 !important;
+  z-index: 0 !important;
   pointer-events: none !important;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 2;
 }
 
 .hero {
