@@ -8,6 +8,7 @@ import ParticlesBg from 'particles-bg';
 import { particleConfig } from './Components/ParticlesConfig/particlesConfig';
 import FaceRecognition from './Components/FaceRecognition/FaceRecognition';
 import SignIn from './Components/SignIn/SignIn';
+import Register from './Components/Register/Register';
 
 class App extends Component {
   constructor() {
@@ -142,9 +143,7 @@ class App extends Component {
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
           <Navigation onRouteChange={this.onRouteChange} />
-          {this.state.route === 'signin' ? (
-            <SignIn onRouteChange={this.onRouteChange} />
-          ) : (
+          {this.state.route === 'home' ? (
             <div className="hero">
               <section className="control-card" aria-label="Image detection controls">
                 <Logo />
@@ -162,7 +161,11 @@ class App extends Component {
                 onImageLoad={this.onImageLoad}
               />
             </div>
-          )}
+          ) : this.state.route === 'signin' ? (
+            <SignIn onRouteChange={this.onRouteChange} />
+          ) : this.state.route === 'register' ? (
+            <Register onRouteChange={this.onRouteChange} />
+          ) : null}
         </div>
       </div>
     );

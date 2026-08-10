@@ -43,7 +43,11 @@ const SignIn = ({ onRouteChange }) => {
             >
               Sign In
             </button>
-            <button className="btn sign-in-button" type="button">
+            <button
+              className="btn sign-in-button"
+              type="button"
+              onClick={() => onRouteChange('register')}
+            >
               Register
             </button>
           </div>

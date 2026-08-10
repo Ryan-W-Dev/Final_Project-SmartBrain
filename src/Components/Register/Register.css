@@ -1,0 +1,59 @@
+.register-page {
+  display: grid;
+  min-height: 100vh;
+  padding: 84px 20px 40px;
+  place-items: center;
+}
+
+.register {
+  width: 100%;
+  max-width: 720px;
+  margin: 0;
+}
+
+.register-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.register-form {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.register-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.register-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.register-input {
+  width: 100%;
+}
+
+.register-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.register-button {
+  min-width: 108px;
+}
+
+@media (max-width: 680px) {
+  .register-page {
+    padding: 78px 10px 24px;
+  }
+}
