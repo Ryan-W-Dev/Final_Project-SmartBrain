@@ -21,6 +21,7 @@ class App extends Component {
       error: '',
       isLoading: false,
       route: 'signin', // Default route is 'signin'
+      isSignedIn: false,
     };
   }
 
@@ -134,6 +135,11 @@ class App extends Component {
   };
 
   onRouteChange = (route) => {
+    if (route === 'signout') {
+      this.setState({ isSignedIn: false, route: 'signin' });
+    } else if (route === 'home') {
+      this.setState({ isSignedIn: true });
+    }
     this.setState({ route });
   };
 
@@ -142,7 +148,7 @@ class App extends Component {
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
-          <Navigation onRouteChange={this.onRouteChange} />
+          <Navigation isSignedIn={this.state.isSignedIn} onRouteChange={this.onRouteChange} />
           {this.state.route === 'home' ? (
             <div className="hero">
               <section className="control-card" aria-label="Image detection controls">
