@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ImageLinkForm = () => {
+const ImageLinkForm = ({ onInputChange, onButtonSubmit }) => {
   return (
     <div className="image-link-form">
       <p className="image-link-copy">
@@ -8,8 +8,10 @@ const ImageLinkForm = () => {
       </p>
       <div className="image-link-box">
         <div className="image-link-row">
-          <input className="image-link-input" type="text" />
-          <button className="btn image-link-button">Detect</button>
+          <input className="image-link-input" type="text" onChange={onInputChange} />
+          <button className="btn image-link-button" onClick={onButtonSubmit}>
+            Detect
+          </button>
         </div>
       </div>
     </div>
