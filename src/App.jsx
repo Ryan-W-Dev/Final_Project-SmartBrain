@@ -6,23 +6,19 @@ import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
 import { useParticleConfig } from './Components/ParticlesConfig/ParticlesConfig';
 
-function App() {
-  const particleConfig = useParticleConfig();
-
-  return (
-    <>
-      <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
-      <div className="app-shell">
-        <Navigation></Navigation>
-        <div className="hero">
-          <Logo></Logo>
-          <Rank></Rank>
-          <ImageLinkForm></ImageLinkForm>
-          {/* <FaceRecognition></FaceRecognition> */}
-        </div>
+const App = () => (
+  <div className="app-root">
+    <ParticlesBg type="cobweb" config={useParticleConfig()} bg={true} />
+    <div className="app-shell">
+      <Navigation />
+      <div className="hero">
+        <Logo />
+        <Rank />
+        <ImageLinkForm />
+        {/* <FaceRecognition></FaceRecognition> */}
       </div>
-    </>
-  );
-}
+    </div>
+  </div>
+);
 
 export default App;
