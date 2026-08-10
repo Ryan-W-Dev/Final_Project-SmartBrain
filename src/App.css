@@ -32,11 +32,14 @@
 
 .navigation {
   position: fixed;
-  top: 6px;
-  right: 0;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  bottom: auto;
   z-index: 1000;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .image-link-form {
@@ -129,7 +132,8 @@
   }
 
   .navigation {
-    top: 4px;
-    right: 0;
+    top: 10px;
+    right: 10px;
+    left: auto;
   }
 }

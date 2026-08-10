@@ -31,8 +31,8 @@ function App() {
   return (
     <>
       <ParticlesBg type="cobweb" config={config} bg={true} />
+      <Navigation></Navigation>
       <div className="hero">
-        <Navigation></Navigation>
         <Logo></Logo>
         <Rank></Rank>
         <ImageLinkForm></ImageLinkForm>
