@@ -38,6 +38,23 @@
   max-width: 720px;
 }
 
+.control-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: clamp(24px, 4vw, 38px);
+  border: 1px solid rgba(159, 176, 217, 0.65);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.control-card .image-link-form {
+  width: 100%;
+}
+
 .navigation {
   position: fixed;
   top: 12px;
@@ -146,6 +163,12 @@
 
   .image-link-box {
     padding: 12px;
+  }
+
+  .control-card {
+    gap: 14px;
+    padding: 22px 14px;
+    border-radius: 18px;
   }
 
   .image-link-row {

@@ -137,14 +137,16 @@ class App extends Component {
         <div className="app-shell">
           <Navigation />
           <div className="hero">
-            <Logo />
-            <Rank />
-            <ImageLinkForm
-              error={this.state.error}
-              isLoading={this.state.isLoading}
-              onInputChange={this.onInputChange}
-              onButtonSubmit={this.onButtonSubmit}
-            />
+            <section className="control-card" aria-label="Image detection controls">
+              <Logo />
+              <Rank />
+              <ImageLinkForm
+                error={this.state.error}
+                isLoading={this.state.isLoading}
+                onInputChange={this.onInputChange}
+                onButtonSubmit={this.onButtonSubmit}
+              />
+            </section>
             <FaceRecognition
               boxes={this.state.boxes}
               imageUrl={this.state.imageUrl}
