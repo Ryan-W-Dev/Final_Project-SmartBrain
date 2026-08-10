@@ -7,34 +7,26 @@ import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
 
 const BASE_CONFIG = {
-  rps: 0.1,
   life: [1.5, 3],
-  v: [2, 3],
   tha: [-40, 40],
-  alpha: [0.6, 0],
-  scale: [0.1, 0.4],
+  scale: [0.1, 0.2],
   position: 'all',
   color: ['random', '#080808'],
   cross: 'dead',
   random: 15,
-  onParticleUpdate: (ctx, particle) => {
-    ctx.beginPath();
-    ctx.rect(particle.p.x, particle.p.y, particle.radius * 2, particle.radius * 2);
-    ctx.fillStyle = particle.color;
-    ctx.fill();
-    ctx.closePath();
-  },
 };
 
 const BASE_VIEWPORT_AREA = 1366 * 768;
 const BASE_PARTICLE_NUM = [4, 7];
-const BASE_PARTICLE_RADIUS = [0, 1];
-const BASE_PARTICLE_VELOCITY = [0, 1];
-const DENSITY_EXPONENT = 0.1;
+const BASE_PARTICLE_RADIUS = [5, 40];
+const BASE_PARTICLE_VELOCITY = [2, 3];
+const DENSITY_EXPONENT = 2;
 const SMALL_IPHONE_MAX_WIDTH = 430;
 const SMALL_IPHONE_MAX_HEIGHT = 950;
-const IPHONE_ACTIVITY_SCALE = 0.001;
+const IPHONE_ACTIVITY_SCALE = 0.1;
 const IPHONE_SPEED_SCALE = 0.25;
+const DESKTOP_RPS = 0.1;
+const IPHONE_RPS = 0.00225;
 
 const getParticleSettings = (width, height) => {
   const area = Math.max(1, width * height);
@@ -64,7 +56,7 @@ const getParticleSettings = (width, height) => {
         (isSmallIphoneViewport ? 0.2 + 0.55 * densityScale : 0.45 + 0.55 * densityScale)
     )
   );
-  const rps = isSmallIphoneViewport ? 0.00225 : 0.1;
+  const rps = isSmallIphoneViewport ? IPHONE_RPS : DESKTOP_RPS;
   const velocity = isSmallIphoneViewport
     ? [
         BASE_PARTICLE_VELOCITY[0] * IPHONE_SPEED_SCALE,
@@ -86,7 +78,7 @@ function App() {
       return {
         num: BASE_PARTICLE_NUM,
         radius: BASE_PARTICLE_RADIUS,
-        rps: BASE_CONFIG.rps,
+        rps: DESKTOP_RPS,
         v: BASE_PARTICLE_VELOCITY,
       };
     }
