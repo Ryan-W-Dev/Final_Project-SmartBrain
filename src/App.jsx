@@ -141,7 +141,7 @@ class App extends Component {
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
         <div className="app-shell">
-          <Navigation />
+          <Navigation onRouteChange={this.onRouteChange} />
           {this.state.route === 'signin' ? (
             <SignIn onRouteChange={this.onRouteChange} />
           ) : (
