@@ -6,7 +6,7 @@
 .particles-bg-canvas-self {
   position: fixed !important;
   inset: 0;
-  z-index: 0 !important;
+  z-index: -1 !important;
   pointer-events: none !important;
 }
 
