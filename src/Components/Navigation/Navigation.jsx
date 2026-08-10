@@ -4,7 +4,7 @@ const Navigation = () => {
   return (
     <nav className="navigation">
       <a className="btn" href="#" role="button">
-        Sign Out
+        Sign In
       </a>
     </nav>
   );
