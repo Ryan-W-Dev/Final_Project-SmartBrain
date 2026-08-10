@@ -98,6 +98,28 @@
   white-space: nowrap;
 }
 
+.image-link-button:disabled,
+.image-link-input:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.image-link-hint,
+.image-link-error {
+  margin: 10px 2px 0;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.image-link-hint {
+  color: #475569;
+}
+
+.image-link-error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .rank,
 .rank-2 {
   text-align: center;

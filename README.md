@@ -1,6 +1,6 @@
-# Smart Brain (Frontend)
+# Smart Brain
 
-Smart Brain is a React + Vite frontend project for a face-detection style UI challenge.
+Smart Brain is a React + Vite image-detection UI with an Express API that safely keeps the Hugging Face token out of the browser.
 
 The app currently includes:
 
@@ -8,6 +8,8 @@ The app currently includes:
 - A fixed top-right navigation button that stays pinned during viewport changes
 - A particles background that remains behind all UI content
 - Responsive particle tuning for iPhone-sized viewports (lower density, slower speed, lower spawn rate)
+- Server-side image downloading so direct image URLs are not blocked by browser CORS
+- Hugging Face object detection with server-side credentials
 
 ## Tech Stack
 
@@ -16,6 +18,7 @@ The app currently includes:
 - particles-bg
 - react-parallax-tilt
 - Oxlint
+- Express
 
 ## Getting Started
 
@@ -25,19 +28,27 @@ The app currently includes:
 npm install
 ```
 
-2. Start development server:
+2. Copy `.env.example` to `.env` and replace the placeholder with a newly generated Hugging Face access token:
+
+```text
+HF_TOKEN=hf_your_new_token
+```
+
+Never commit `.env` or put the token in a `VITE_*` variable; Vite variables are visible in the browser.
+
+3. Start the React and API development servers together:
 
 ```bash
 npm run dev
 ```
 
-3. Build for production:
+4. Build for production:
 
 ```bash
 npm run build
 ```
 
-4. Preview production build:
+5. Preview the production build through the Express server:
 
 ```bash
 npm run preview
@@ -45,22 +56,30 @@ npm run preview
 
 ## Scripts
 
-- `npm run dev`: start local Vite dev server
+- `npm run dev`: start Vite and the Express API together
+- `npm run dev:client`: start only Vite
+- `npm run dev:server`: start only the API with file watching
 - `npm run build`: production build
-- `npm run preview`: preview production build locally
+- `npm run preview`: build and serve the production app locally
+- `npm start`: serve the existing `dist` build and API
+
+The API entry point is `server.jsx` and runs through the `tsx` runtime.
 - `npm run lint`: run Oxlint
 
 ## Project Structure
 
 ```text
 src/
-App.jsx
+	App.jsx
 	App.css
 	index.css
 	main.jsx
 	Components/
 		ImageLinkForm/
 			ImageLinkForm.jsx
+		FaceRecognition/
+			FaceRecognition.jsx
+			FaceRecognition.css
 		Logo/
 			Logo.jsx
 			Logo.css
@@ -89,6 +108,6 @@ It includes:
 - Particles are forced below app content using z-index layering
 - Navigation is fixed on the right side across breakpoints
 
-## Current Scope
+## Image URL Notes
 
-This repository is focused on the frontend UI layer. Face detection API wiring and authentication flows are not yet included in the current app state.
+Paste a direct image address whose response has an `image/*` content type. A gallery, search result, or stock-photo webpage is not a direct image URL. The API accepts public HTTP/HTTPS images up to 10 MB and rejects local/private network addresses.
