@@ -12,6 +12,7 @@ const modelUrl =
   process.env.HF_MODEL_URL ||
   'https://router.huggingface.co/hf-inference/models/facebook/detr-resnet-50';
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
+const supportedUploadTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -146,50 +147,84 @@ const downloadImage = async (initialUrl) => {
   throw new HttpError(400, 'The image URL could not be followed.');
 };
 
+const detectImage = async ({ contentType, image }) => {
+  const token = process.env.HF_TOKEN;
+  if (!token) {
+    throw new HttpError(503, 'The server is missing its Hugging Face token.');
+  }
+
+  let modelResponse;
+  try {
+    modelResponse = await fetch(modelUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        'Content-Type': contentType,
+      },
+      body: image,
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    throw new HttpError(502, 'The Hugging Face service could not be reached.');
+  }
+
+  const modelResult = await modelResponse.json().catch(() => null);
+
+  if (!modelResponse.ok) {
+    const detail = modelResult?.error ? ` ${modelResult.error}` : '';
+    throw new HttpError(502, `Hugging Face rejected the image.${detail}`);
+  }
+
+  if (!Array.isArray(modelResult)) {
+    throw new HttpError(502, 'Hugging Face returned an unexpected response.');
+  }
+
+  return modelResult;
+};
+
+const sendDetectionResponse = async (response, { contentType, image }) => {
+  const predictions = await detectImage({ contentType, image });
+
+  response.json({
+    imageUrl: `data:${contentType};base64,${image.toString('base64')}`,
+    predictions,
+  });
+};
+
+app.use(express.raw({ type: 'image/*', limit: maxImageBytes }));
 app.use(express.json({ limit: '4kb' }));
 
 app.post('/api/detect', async (request, response, next) => {
   try {
-    const token = process.env.HF_TOKEN;
-    if (!token) {
-      throw new HttpError(503, 'The server is missing its Hugging Face token.');
-    }
-
     if (typeof request.body?.imageUrl !== 'string') {
       throw new HttpError(400, 'An imageUrl string is required.');
     }
 
-    const { contentType, image } = await downloadImage(request.body.imageUrl.trim());
-    let modelResponse;
-    try {
-      modelResponse = await fetch(modelUrl, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-          'Content-Type': contentType,
-        },
-        body: image,
-        signal: AbortSignal.timeout(60_000),
-      });
-    } catch {
-      throw new HttpError(502, 'The Hugging Face service could not be reached.');
-    }
-    const modelResult = await modelResponse.json().catch(() => null);
+    const downloadedImage = await downloadImage(request.body.imageUrl.trim());
+    await sendDetectionResponse(response, downloadedImage);
+  } catch (error) {
+    next(error);
+  }
+});
 
-    if (!modelResponse.ok) {
-      const detail = modelResult?.error ? ` ${modelResult.error}` : '';
-      throw new HttpError(502, `Hugging Face rejected the image.${detail}`);
+app.post('/api/detect-upload', async (request, response, next) => {
+  try {
+    const contentType = request.get('content-type')?.split(';')[0].toLowerCase();
+
+    if (!supportedUploadTypes.has(contentType)) {
+      throw new HttpError(415, 'Choose a JPG, PNG, GIF, or WebP image.');
     }
 
-    if (!Array.isArray(modelResult)) {
-      throw new HttpError(502, 'Hugging Face returned an unexpected response.');
+    if (!Buffer.isBuffer(request.body) || request.body.length === 0) {
+      throw new HttpError(400, 'Choose an image from your device first.');
     }
 
-    response.json({
-      imageUrl: `data:${contentType};base64,${image.toString('base64')}`,
-      predictions: modelResult,
-    });
+    if (request.body.length > maxImageBytes) {
+      throw new HttpError(413, 'The image is larger than the 10 MB limit.');
+    }
+
+    await sendDetectionResponse(response, { contentType, image: request.body });
   } catch (error) {
     next(error);
   }
@@ -207,9 +242,13 @@ app.use((request, response, next) => {
 });
 
 app.use((error, _request, response, _next) => {
-  const status = error instanceof HttpError ? error.status : 500;
-  const message =
-    error instanceof HttpError ? error.message : 'The server could not process the image.';
+  const isTooLarge = error?.type === 'entity.too.large';
+  const status = error instanceof HttpError ? error.status : isTooLarge ? 413 : 500;
+  const message = error instanceof HttpError
+    ? error.message
+    : isTooLarge
+      ? 'The image is larger than the 10 MB limit.'
+      : 'The server could not process the image.';
 
   if (!(error instanceof HttpError)) {
     console.error(error);

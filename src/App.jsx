@@ -10,6 +10,57 @@ import FaceRecognition from './Components/FaceRecognition/FaceRecognition';
 import SignIn from './Components/SignIn/SignIn';
 import Register from './Components/Register/Register';
 
+const MAX_DETECTION_IMAGE_BYTES = 10 * 1024 * 1024;
+const SUPPORTED_DETECTION_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
+const IPHONE_IMAGE_TYPES = new Set(['image/heic', 'image/heif']);
+
+const convertToJpeg = (file) =>
+  new Promise((resolve, reject) => {
+    const imageUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      const maxDimension = 2048;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+      const context = canvas.getContext('2d');
+      if (!context) {
+        URL.revokeObjectURL(imageUrl);
+        reject(new Error('This image could not be prepared for detection.'));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(imageUrl);
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('This image could not be prepared for detection.'));
+          }
+        },
+        'image/jpeg',
+        0.9
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(imageUrl);
+      reject(new Error('This image format is not supported. Choose a JPG, PNG, GIF, or WebP.'));
+    };
+
+    image.src = imageUrl;
+  });
+
 class App extends Component {
   constructor() {
     super();
@@ -136,6 +187,73 @@ class App extends Component {
     }
   };
 
+  onFileSubmit = async (file) => {
+    if (!file) {
+      this.setState({ error: 'Choose an image from your device first.' });
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.setState({ error: 'Choose a valid image file.' });
+      return;
+    }
+
+    if (file.size > MAX_DETECTION_IMAGE_BYTES) {
+      this.setState({ error: 'The image is larger than the 10 MB limit.' });
+      return;
+    }
+
+    this.setState({
+      boxes: [],
+      detections: [],
+      error: '',
+      imageUrl: '',
+      isLoading: true,
+    });
+
+    try {
+      let uploadImage = file;
+
+      if (!SUPPORTED_DETECTION_IMAGE_TYPES.has(file.type)) {
+        if (!IPHONE_IMAGE_TYPES.has(file.type)) {
+          throw new Error('This image format is not supported. Choose a JPG, PNG, GIF, or WebP.');
+        }
+
+        uploadImage = await convertToJpeg(file);
+      }
+
+      if (uploadImage.size > MAX_DETECTION_IMAGE_BYTES) {
+        throw new Error('The prepared image is larger than the 10 MB limit.');
+      }
+
+      const response = await fetch('/api/detect-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': uploadImage.type },
+        body: uploadImage,
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Image detection failed.');
+      }
+
+      if (!Array.isArray(result.predictions)) {
+        throw new Error('The detection service returned an unexpected response.');
+      }
+
+      this.setState({
+        detections: result.predictions,
+        imageUrl: result.imageUrl,
+        isLoading: false,
+      });
+    } catch (error) {
+      this.setState({
+        error: error instanceof Error ? error.message : 'Image detection failed.',
+        isLoading: false,
+      });
+    }
+  };
+
   onRouteChange = (route) => {
     if (route === 'signout') {
       this.setState({ isSignedIn: false, route: 'signin' });
@@ -170,6 +288,7 @@ class App extends Component {
                 <ImageLinkForm
                   error={error}
                   isLoading={isLoading}
+                  onFileSubmit={this.onFileSubmit}
                   onInputChange={this.onInputChange}
                   onButtonSubmit={this.onButtonSubmit}
                 />

@@ -146,6 +146,74 @@
   color: #475569;
 }
 
+.image-source-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.image-source-divider::before,
+.image-source-divider::after {
+  height: 1px;
+  flex: 1 1 auto;
+  background: #c7d2fe;
+  content: '';
+}
+
+.image-upload-form {
+  width: 100%;
+}
+
+.image-upload-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+}
+
+.image-upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.image-upload-picker,
+.image-upload-submit {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.image-upload-picker.is-disabled {
+  cursor: wait;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.image-upload-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-upload-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .image-link-error {
   color: #b91c1c;
   font-weight: 700;
@@ -187,6 +255,16 @@
 
   .image-link-row {
     gap: 8px;
+  }
+
+  .image-upload-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .image-upload-name {
+    order: 3;
+    flex-basis: 100%;
   }
 
   .image-link-input {
