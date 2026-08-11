@@ -25,6 +25,89 @@
   gap: 16px;
 }
 
+.register-upload {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 4px 0 8px;
+}
+
+.register-upload .logo-container {
+  flex: 0 0 150px;
+}
+
+.register-upload-controls {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.register-optional {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.register-file-input {
+  width: 100%;
+  color: #475569;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+}
+
+.register-file-input::file-selector-button {
+  margin-right: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: 1px solid #9fb0d9;
+  border-radius: 6px;
+  background: #eef4ff;
+  color: #334155;
+  font: inherit;
+  font-weight: 700;
+}
+
+.register-file-input::file-selector-button:hover {
+  border-color: #00b4e0;
+  background: #e0f7fc;
+}
+
+.register-upload-hint,
+.register-upload-error {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.register-upload-hint {
+  color: #64748b;
+}
+
+.register-upload-error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.register-remove-image {
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: #007a99;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.register-remove-image:hover {
+  color: #b000a0;
+}
+
 .register-field {
   display: flex;
   flex-direction: column;
@@ -52,8 +135,22 @@
   min-width: 108px;
 }
 
+.register-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 @media (max-width: 680px) {
   .register-page {
     padding: 78px 10px 24px;
+  }
+
+  .register-upload {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .register-upload-controls {
+    width: 100%;
   }
 }

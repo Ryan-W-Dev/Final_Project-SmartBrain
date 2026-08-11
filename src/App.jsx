@@ -1,7 +1,7 @@
 import './App.css';
 import React, { Component } from 'react';
 import Navigation from './Components/Navigation/Navigation';
-import Logo from './Components/Logo/Logo';
+import Logo, { DEFAULT_PROFILE_IMAGE } from './Components/Logo/Logo';
 import ImageLinkForm from './Components/ImageLinkForm/ImageLinkForm';
 import Rank from './Components/Rank/Rank';
 import ParticlesBg from 'particles-bg';
@@ -22,6 +22,7 @@ class App extends Component {
       isLoading: false,
       route: 'signin', // Default route is 'signin'
       isSignedIn: false,
+      profileImageSrc: DEFAULT_PROFILE_IMAGE,
     };
   }
 
@@ -143,8 +144,16 @@ class App extends Component {
     this.setState({ route });
   };
 
+  onRegister = (profileImageSrc) => {
+    this.setState({
+      isSignedIn: true,
+      profileImageSrc: profileImageSrc || DEFAULT_PROFILE_IMAGE,
+      route: 'home',
+    });
+  };
+
   render() {
-    const { isSignedIn, route, boxes, imageUrl, error, isLoading } = this.state;
+    const { isSignedIn, route, boxes, imageUrl, error, isLoading, profileImageSrc } = this.state;
     return (
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
@@ -153,7 +162,7 @@ class App extends Component {
           {route === 'home' ? (
             <div className="hero">
               <section className="control-card" aria-label="Image detection controls">
-                <Logo />
+                <Logo imageSrc={profileImageSrc} />
                 <Rank />
                 <ImageLinkForm
                   error={error}
@@ -167,7 +176,7 @@ class App extends Component {
           ) : route === 'signin' ? (
             <SignIn onRouteChange={this.onRouteChange} />
           ) : route === 'register' ? (
-            <Register onRouteChange={this.onRouteChange} />
+            <Register onRegister={this.onRegister} onRouteChange={this.onRouteChange} />
           ) : null}
         </div>
       </div>
