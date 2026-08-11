@@ -9,7 +9,12 @@ const Register = ({ onRegister, onRouteChange }) => {
   const [profileImage, setProfileImage] = useState('');
   const [profileImageError, setProfileImageError] = useState('');
   const [isReadingImage, setIsReadingImage] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
   const fileInputRef = useRef(null);
+  const passwordsDoNotMatch = password !== confirmPassword;
+  const showPasswordError = confirmPasswordTouched && passwordsDoNotMatch;
 
   const clearProfileImage = () => {
     setProfileImage('');
@@ -58,6 +63,12 @@ const Register = ({ onRegister, onRouteChange }) => {
 
   const onSubmit = (event) => {
     event.preventDefault();
+
+    if (passwordsDoNotMatch) {
+      setConfirmPasswordTouched(true);
+      return;
+    }
+
     onRegister(profileImage || DEFAULT_PROFILE_IMAGE);
   };
 
@@ -129,12 +140,14 @@ const Register = ({ onRegister, onRouteChange }) => {
               Password
             </label>
             <input
-              autoComplete="current-password"
+              autoComplete="new-password"
               className="form-input register-input"
               id="password"
               name="password"
+              onChange={(event) => setPassword(event.target.value)}
               required
               type="password"
+              value={password}
             />
           </div>
           <div className="register-field">
@@ -142,13 +155,23 @@ const Register = ({ onRegister, onRouteChange }) => {
               Confirm Password
             </label>
             <input
-              autoComplete="current-password"
+              aria-describedby={showPasswordError ? 'password-match-error' : undefined}
+              aria-invalid={showPasswordError}
+              autoComplete="new-password"
               className="form-input register-input"
               id="confirm-password"
               name="confirm-password"
+              onBlur={() => setConfirmPasswordTouched(true)}
+              onChange={(event) => setConfirmPassword(event.target.value)}
               required
               type="password"
+              value={confirmPassword}
             />
+            {showPasswordError ? (
+              <p className="register-password-error" id="password-match-error" role="alert">
+                Passwords do not match.
+              </p>
+            ) : null}
           </div>
           <div className="register-actions">
             <button
