@@ -23,6 +23,7 @@ class App extends Component {
       route: 'signin', // Default route is 'signin'
       isSignedIn: false,
       profileImageSrc: DEFAULT_PROFILE_IMAGE,
+      userName: 'Ryan',
     };
   }
 
@@ -144,16 +145,18 @@ class App extends Component {
     this.setState({ route });
   };
 
-  onRegister = (profileImageSrc) => {
+  onRegister = ({ name, profileImageSrc }) => {
     this.setState({
       isSignedIn: true,
       profileImageSrc: profileImageSrc || DEFAULT_PROFILE_IMAGE,
       route: 'home',
+      userName: name || 'Ryan',
     });
   };
 
   render() {
-    const { isSignedIn, route, boxes, imageUrl, error, isLoading, profileImageSrc } = this.state;
+    const { isSignedIn, route, boxes, imageUrl, error, isLoading, profileImageSrc, userName } =
+      this.state;
     return (
       <div className="app-root">
         <ParticlesBg type="cobweb" config={particleConfig} bg={true} />
@@ -163,7 +166,7 @@ class App extends Component {
             <div className="hero">
               <section className="control-card" aria-label="Image detection controls">
                 <Logo imageSrc={profileImageSrc} />
-                <Rank />
+                <Rank name={userName} />
                 <ImageLinkForm
                   error={error}
                   isLoading={isLoading}

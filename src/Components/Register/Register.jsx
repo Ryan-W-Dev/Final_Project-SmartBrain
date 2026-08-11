@@ -9,6 +9,7 @@ const Register = ({ onRegister, onRouteChange }) => {
   const [profileImage, setProfileImage] = useState('');
   const [profileImageError, setProfileImageError] = useState('');
   const [isReadingImage, setIsReadingImage] = useState(false);
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
@@ -69,7 +70,10 @@ const Register = ({ onRegister, onRouteChange }) => {
       return;
     }
 
-    onRegister(profileImage || DEFAULT_PROFILE_IMAGE);
+    onRegister({
+      name: name.trim(),
+      profileImageSrc: profileImage || DEFAULT_PROFILE_IMAGE,
+    });
   };
 
   return (
@@ -118,8 +122,10 @@ const Register = ({ onRegister, onRouteChange }) => {
               className="form-input register-input"
               id="name"
               name="name"
+              onChange={(event) => setName(event.target.value)}
               required
               type="text"
+              value={name}
             />
           </div>
           <div className="register-field">
