@@ -278,9 +278,7 @@ class App extends Component {
     const hasCustomProfileImage = Boolean(result.user.profileImageSrc);
     this.setState({
       hasCustomProfileImage,
-      profileImageSrc: hasCustomProfileImage
-        ? result.user.profileImageSrc
-        : DEFAULT_PROFILE_IMAGE,
+      profileImageSrc: hasCustomProfileImage ? result.user.profileImageSrc : DEFAULT_PROFILE_IMAGE,
     });
   };
 
