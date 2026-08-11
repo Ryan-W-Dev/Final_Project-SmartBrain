@@ -77,7 +77,8 @@
 
 .register-upload-hint,
 .register-upload-error,
-.register-password-error {
+.register-password-error,
+.register-auth-error {
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.4;
@@ -88,9 +89,14 @@
 }
 
 .register-upload-error,
-.register-password-error {
+.register-password-error,
+.register-auth-error {
   color: #b91c1c;
   font-weight: 700;
+}
+
+.register-auth-error {
+  text-align: center;
 }
 
 .register-input[aria-invalid='true'] {

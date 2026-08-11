@@ -1,113 +1,158 @@
 # Smart Brain
 
-Smart Brain is a React + Vite image-detection UI with an Express API that safely keeps the Hugging Face token out of the browser.
+Smart Brain is a responsive React application that detects people in images. Users can create an account, submit an image URL or upload a photo from their device, and compete for leaderboard rank based on their number of successful detections.
 
-The app currently includes:
+The browser communicates with an Express API, which keeps the Hugging Face token and all database access on the server.
 
-- A hero layout with logo, rank display, and image URL form
-- A fixed top-right navigation button that stays pinned during viewport changes
-- A particles background that remains behind all UI content
-- Responsive particle tuning for iPhone-sized viewports (lower density, slower speed, lower spawn rate)
-- Server-side image downloading so direct image URLs are not blocked by browser CORS
-- Hugging Face object detection with server-side credentials
+## Features
+
+- Register with a name, properly formatted unique email address, and password confirmation
+- Sign in only when the submitted email and password match a registered account
+- Secure scrypt password hashing and database-backed HTTP-only sessions
+- Optional profile picture during registration, with a default image when none is selected
+- Update or remove a profile picture after signing in
+- Consistent circular cropping and tilt effects for default and uploaded profile pictures
+- Detect people using either a direct image URL or a photo from a phone, tablet, or desktop
+- Support for JPG, PNG, GIF, and WebP detection images up to 10 MB
+- iPhone HEIC/HEIF conversion when the browser can decode the selected image
+- Persistent detection totals and dynamically calculated PostgreSQL rankings
+- Responsive upload controls that keep **Choose photo** and **Detect photo** side by side on small screens
+- A sign-out button that appears only when a user is signed in
+- Responsive particle effects and a custom favicon
+
+## Ranking
+
+A user's detection total increases only after the detection service successfully processes an image. Rankings are recalculated from all registered users:
+
+1. The user with the most successful detections receives rank `#1`.
+2. The next-highest total receives rank `#2`, and so on.
+3. If users have the same total, the account created first ranks higher. The database ID provides the final deterministic tie-break.
+
+The signed-in user's registered name, current rank, and successful detection count are displayed above the image controls.
+
+## Profile Pictures
+
+Profile pictures are optional and stored with the user's PostgreSQL account. Supported formats are JPG, PNG, GIF, and WebP, with a maximum size of 5 MB.
+
+After signing in, a user can:
+
+- Choose and preview a replacement picture
+- Save the new picture to their account
+- Return to the default profile image
 
 ## Tech Stack
 
 - React 19
 - Vite 8
-- particles-bg
-- react-parallax-tilt
+- Express 5
+- PostgreSQL 17
+- node-postgres (`pg`)
+- Docker Compose for the local database
+- Hugging Face Inference API
+- `particles-bg`
+- `react-parallax-tilt`
 - Oxlint
-- Express
+- `tsx` for the API runtime
+
+## Prerequisites
+
+- Node.js and npm
+- Docker Desktop or another Docker Compose-compatible runtime
+- A Hugging Face access token with permission to use the configured inference model
 
 ## Getting Started
 
-1. Install dependencies:
+1. Install the dependencies:
 
 ```bash
 npm install
 ```
 
-2. Copy `.env.example` to `.env` and replace the placeholder with a newly generated Hugging Face access token:
+2. Start PostgreSQL:
 
-```text
-HF_TOKEN=hf_your_new_token
+```bash
+npm run db:start
 ```
 
-Never commit `.env` or put the token in a `VITE_*` variable; Vite variables are visible in the browser.
+The database runs from `compose.yaml`. Its schema is created automatically when the API starts, and its data remains in a Docker volume when the container is stopped.
 
-3. Start the React and API development servers together:
+3. Copy `.env.example` to `.env` and replace the sample Hugging Face token:
+
+```dotenv
+HF_TOKEN=hf_your_new_token
+DATABASE_URL=postgresql://smartbrain:smartbrain@localhost:5432/smartbrain
+DATABASE_SSL=false
+PORT=3001
+```
+
+Never commit `.env`. Do not expose the Hugging Face token through a `VITE_*` variable because Vite variables are included in browser code.
+
+4. Start the Vite client and Express API together:
 
 ```bash
 npm run dev
 ```
 
-4. Build for production:
-
-```bash
-npm run build
-```
-
-5. Preview the production build through the Express server:
-
-```bash
-npm run preview
-```
+5. Open the local URL shown by Vite in the terminal.
 
 ## Scripts
 
-- `npm run dev`: start Vite and the Express API together
-- `npm run dev:client`: start only Vite
-- `npm run dev:server`: start only the API with file watching
-- `npm run build`: production build
-- `npm run preview`: build and serve the production app locally
-- `npm start`: serve the existing `dist` build and API
+- `npm run dev` — start the Vite client and Express API together
+- `npm run dev:client` — start only the Vite development server
+- `npm run dev:server` — start only the API with file watching
+- `npm run db:start` — start the local PostgreSQL container
+- `npm run db:stop` — stop PostgreSQL without deleting its stored data
+- `npm run build` — create the production client build
+- `npm run preview` — build and serve the production application locally
+- `npm start` — serve the existing `dist` build and API
+- `npm run lint` — run Oxlint
 
-The API entry point is `server.jsx` and runs through the `tsx` runtime.
-- `npm run lint`: run Oxlint
+## Production Database
+
+For a hosted PostgreSQL provider, replace `DATABASE_URL` with the provider's connection string. Set `DATABASE_SSL=true` when the provider requires TLS.
+
+The application requires `DATABASE_URL` when `NODE_ENV=production`.
 
 ## Project Structure
 
 ```text
-src/
-	App.jsx
-	App.css
-	index.css
-	main.jsx
-	Components/
-		ImageLinkForm/
-			ImageLinkForm.jsx
-		FaceRecognition/
-			FaceRecognition.jsx
-			FaceRecognition.css
-		Logo/
-			Logo.jsx
-			Logo.css
-		Navigation/
-			Navigation.jsx
-		ParticlesConfig/
-			ParticlesConfig.jsx
-		Rank/
-			Rank.jsx
+.
+├── compose.yaml                 Local PostgreSQL service
+├── database.jsx                PostgreSQL connection and queries
+├── db/
+│   └── schema.sql              Users and sessions schema
+├── server.jsx                  Express authentication and detection API
+└── src/
+    ├── App.jsx                 Application state and API integration
+    ├── App.css                 Main and responsive layout
+    ├── index.css               Shared global and button styles
+    ├── assets/
+    │   └── intelligenceai.png  Favicon asset
+    └── Components/
+        ├── FaceRecognition/    Detection image and bounding boxes
+        ├── ImageLinkForm/      URL and device image controls
+        ├── Logo/               Profile image display and tilt effect
+        ├── Navigation/         Signed-in navigation
+        ├── ParticlesConfig/    Responsive particle configuration
+        ├── ProfileImageEditor/ Signed-in profile picture updates
+        ├── Rank/               User rank and detection total
+        ├── Register/           Account registration form
+        └── SignIn/             Account sign-in form
 ```
 
-## Particle System Notes
+## Image Detection Notes
 
-Particle behavior is centralized in `src/Components/ParticlesConfig/ParticlesConfig.jsx`.
+For URL detection, enter a direct public HTTP or HTTPS image address whose response has an `image/*` content type. Gallery pages, search-result pages, and stock-photo webpages are not direct image URLs.
 
-It includes:
+The API downloads URL images server-side to avoid browser CORS limitations. It rejects local or private-network addresses and images larger than 10 MB.
 
-- Base particle config
-- Viewport-aware particle settings
-- iPhone viewport detection and adjustments
-- `useParticleConfig()` custom hook used by `src/App.jsx`
+For device uploads, iPhone and Android users can select an image from their photo library. Desktop users can select one from their files.
 
-## Styling Notes
+## Database and Security Notes
 
-- Main layout and layering live in `src/App.css`
-- Particles are forced below app content using z-index layering
-- Navigation is fixed on the right side across breakpoints
-
-## Image URL Notes
-
-Paste a direct image address whose response has an `image/*` content type. A gallery, search result, or stock-photo webpage is not a direct image URL. The API accepts public HTTP/HTTPS images up to 10 MB and rejects local/private network addresses.
+- User emails are normalized and uniquely indexed in PostgreSQL.
+- Password hashes, never plaintext passwords, are stored in the database.
+- Session tokens are stored in the browser as HTTP-only cookies; only token hashes are persisted.
+- SQL queries use parameters for user-provided values.
+- Profile-image and detection endpoints require an authenticated session.
+- Uploaded detection images are processed for detection but are not stored in PostgreSQL.

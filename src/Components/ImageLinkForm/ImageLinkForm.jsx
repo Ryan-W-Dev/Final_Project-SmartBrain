@@ -11,7 +11,7 @@ const ImageLinkForm = ({ error, isLoading, onFileSubmit, onInputChange, onButton
   return (
     <div className="image-link-form">
       <p className="image-link-copy">
-        {'This magic brain will detect faces in your pictures. Give it a try.'}
+        {'This magic brain will detect people in your pictures. Give it a try.'}
       </p>
       <div className="image-link-box">
         <form className="image-link-row" onSubmit={onButtonSubmit}>

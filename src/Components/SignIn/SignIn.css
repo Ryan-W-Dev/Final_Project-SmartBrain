@@ -52,6 +52,20 @@
   min-width: 108px;
 }
 
+.sign-in-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.sign-in-error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
 @media (max-width: 680px) {
   .sign-in-page {
     padding: 78px 10px 24px;

@@ -1,0 +1,99 @@
+.profile-image-editor,
+.profile-image-controls,
+.profile-image-actions {
+  display: flex;
+  align-items: center;
+}
+
+.profile-image-editor {
+  width: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-image-controls {
+  flex-direction: column;
+  gap: 7px;
+  text-align: center;
+}
+
+.profile-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-image-picker {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.profile-image-picker.is-disabled {
+  cursor: wait;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.profile-image-hint,
+.profile-image-name,
+.profile-image-message {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.profile-image-hint,
+.profile-image-name {
+  color: #64748b;
+}
+
+.profile-image-name {
+  max-width: min(100%, 360px);
+  overflow-wrap: anywhere;
+}
+
+.profile-image-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.profile-image-text-button {
+  padding: 5px 2px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: #007a99;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.profile-image-text-button:hover:not(:disabled) {
+  color: #b000a0;
+}
+
+.profile-image-text-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.profile-image-message {
+  font-weight: 700;
+}
+
+.profile-image-message.is-error {
+  color: #b91c1c;
+}
+
+.profile-image-message.is-success {
+  color: #047857;
+}

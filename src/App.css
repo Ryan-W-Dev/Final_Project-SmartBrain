@@ -18,6 +18,16 @@
   z-index: 2;
 }
 
+.session-loading {
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
 .hero {
   position: relative;
   z-index: 1;
@@ -221,7 +231,8 @@
 
 
 .rank,
-.rank-2 {
+.rank-2,
+.rank-count {
   text-align: center;
 }
 
@@ -235,6 +246,13 @@
   font-size: clamp(1.6rem, 5vw, 2rem);
   font-weight: 700;
   margin-top: 6px;
+}
+
+.rank-count {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 @media (max-width: 680px) {
@@ -258,13 +276,33 @@
   }
 
   .image-upload-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
+  .image-upload-picker,
+  .image-upload-submit {
+    width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: clamp(0.76rem, 3.7vw, 0.9rem);
+  }
+
+  .image-upload-picker {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .image-upload-submit {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .image-upload-name {
-    order: 3;
-    flex-basis: 100%;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: center;
   }
 
   .image-link-input {

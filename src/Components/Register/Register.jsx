@@ -5,11 +5,12 @@ import './Register.css';
 const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 const SUPPORTED_PROFILE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
-const Register = ({ onRegister, onRouteChange }) => {
+const Register = ({ authError, isLoading, onRegister, onRouteChange }) => {
   const [profileImage, setProfileImage] = useState('');
   const [profileImageError, setProfileImageError] = useState('');
   const [isReadingImage, setIsReadingImage] = useState(false);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
@@ -71,8 +72,11 @@ const Register = ({ onRegister, onRouteChange }) => {
     }
 
     onRegister({
+      confirmPassword,
+      email,
       name: name.trim(),
-      profileImageSrc: profileImage || DEFAULT_PROFILE_IMAGE,
+      password,
+      profileImageSrc: profileImage,
     });
   };
 
@@ -92,6 +96,7 @@ const Register = ({ onRegister, onRouteChange }) => {
               <input
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 className="register-file-input"
+                disabled={isLoading}
                 id="profile-image"
                 name="profile-image"
                 onChange={onProfileImageChange}
@@ -107,7 +112,12 @@ const Register = ({ onRegister, onRouteChange }) => {
                 </p>
               ) : null}
               {profileImage ? (
-                <button className="register-remove-image" onClick={clearProfileImage} type="button">
+                <button
+                  className="register-remove-image"
+                  disabled={isLoading}
+                  onClick={clearProfileImage}
+                  type="button"
+                >
                   Use default image
                 </button>
               ) : null}
@@ -121,6 +131,8 @@ const Register = ({ onRegister, onRouteChange }) => {
               autoComplete="name"
               className="form-input register-input"
               id="name"
+              disabled={isLoading}
+              maxLength={100}
               name="name"
               onChange={(event) => setName(event.target.value)}
               required
@@ -135,10 +147,14 @@ const Register = ({ onRegister, onRouteChange }) => {
             <input
               autoComplete="email"
               className="form-input register-input"
+              disabled={isLoading}
               id="email"
+              maxLength={320}
               name="email"
+              onChange={(event) => setEmail(event.target.value)}
               required
               type="email"
+              value={email}
             />
           </div>
           <div className="register-field">
@@ -148,7 +164,10 @@ const Register = ({ onRegister, onRouteChange }) => {
             <input
               autoComplete="new-password"
               className="form-input register-input"
+              disabled={isLoading}
               id="password"
+              maxLength={128}
+              minLength={8}
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               required
@@ -165,7 +184,10 @@ const Register = ({ onRegister, onRouteChange }) => {
               aria-invalid={showPasswordError}
               autoComplete="new-password"
               className="form-input register-input"
+              disabled={isLoading}
               id="confirm-password"
+              maxLength={128}
+              minLength={8}
               name="confirm-password"
               onBlur={() => setConfirmPasswordTouched(true)}
               onChange={(event) => setConfirmPassword(event.target.value)}
@@ -179,16 +201,22 @@ const Register = ({ onRegister, onRouteChange }) => {
               </p>
             ) : null}
           </div>
+          {authError ? (
+            <p className="register-auth-error" role="alert">
+              {authError}
+            </p>
+          ) : null}
           <div className="register-actions">
             <button
               className="btn register-button"
-              disabled={isReadingImage}
+              disabled={isReadingImage || isLoading}
               type="submit"
             >
-              {isReadingImage ? 'Loading image…' : 'Register'}
+              {isReadingImage ? 'Loading image…' : isLoading ? 'Creating account…' : 'Register'}
             </button>
             <button
               className="btn register-button"
+              disabled={isLoading}
               type="button"
               onClick={() => onRouteChange('signin')}
             >

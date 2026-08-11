@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Rank = ({ name = 'Ryan' }) => {
+const Rank = ({ detectionCount = 0, name = 'User', rank = 1 }) => {
   return (
     <div>
       <div
@@ -13,7 +13,10 @@ const Rank = ({ name = 'Ryan' }) => {
         className="rank-2"
         style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
       >
-        {'#5'}
+        {`#${rank}`}
+      </div>
+      <div className="rank-count">
+        {`${detectionCount} successful ${detectionCount === 1 ? 'detection' : 'detections'}`}
       </div>
     </div>
   );
