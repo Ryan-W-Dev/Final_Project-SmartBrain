@@ -10,7 +10,9 @@ The browser communicates with an Express API, which keeps the Hugging Face token
 - Sign in only when the submitted email and password match a registered account
 - Secure scrypt password hashing and database-backed HTTP-only sessions
 - Optional profile picture during registration, with a default image when none is selected
-- Update or remove a profile picture after signing in
+- Update or reset a profile picture from a click/tap menu inside the signed-in profile image
+- Preview profile-picture changes, then explicitly save or cancel them
+- Persist saved profile-picture replacements across sign-out and future sign-ins
 - Consistent circular cropping and tilt effects for default and uploaded profile pictures
 - Detect people using either a direct image URL or a photo from a phone, tablet, or desktop
 - Support for JPG, PNG, GIF, and WebP detection images up to 10 MB
@@ -34,11 +36,17 @@ The signed-in user's registered name, current rank, and successful detection cou
 
 Profile pictures are optional and stored with the user's PostgreSQL account. Supported formats are JPG, PNG, GIF, and WebP, with a maximum size of 5 MB.
 
-After signing in, a user can:
+After signing in, desktop users can hover over the profile picture to see the instruction **Click image to change your profile picture**. Clicking the image opens an in-image menu. On mobile and other touch devices, the hover-only instruction stays hidden and tapping the image opens the same menu.
 
-- Choose and preview a replacement picture
-- Save the new picture to their account
-- Return to the default profile image
+The menu provides these options:
+
+- **Change profile image** — select and preview a replacement picture
+- **Use default image** — preview the application's default picture
+- **Cancel** — close the menu without changing the current picture
+
+Selecting a replacement or the default image stages a preview. The account is not changed until the user selects **Save**. A second **Cancel** option discards the staged preview. The menu can also be closed with Escape or by clicking outside it.
+
+Saved changes update the authenticated user's PostgreSQL record. The saved picture is returned with a fresh, non-cached image URL during future sign-ins so the most recent version is displayed.
 
 ## Tech Stack
 
