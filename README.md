@@ -82,6 +82,8 @@ RESET_EMAIL_FROM=Smart Brain <passwords@mail.ryanwynn.dev>
 
 `APP_URL` must use HTTPS, and `RESET_EMAIL_FROM` must use a sender domain verified in Resend. These values belong on the server and must not use the public `VITE_*` prefix.
 
+The production sender `mail.ryanwynn.dev` uses verified SPF and DKIM records plus a DMARC monitoring policy at `_dmarc.mail.ryanwynn.dev`. Keep Resend click and open tracking disabled for password emails. New sending domains must build reputation gradually; mailbox providers make the final inbox-placement decision.
+
 ## Tech Stack
 
 - React 19

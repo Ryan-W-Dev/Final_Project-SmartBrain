@@ -241,7 +241,14 @@ const escapeHtml = (value) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-const createAccountEmailHtml = ({ actionHref, actionLabel, heading, message, notice }) => {
+const createAccountEmailHtml = ({
+  actionHref,
+  actionLabel,
+  heading,
+  message,
+  notice,
+  preheader,
+}) => {
   const action = actionHref
     ? `<a href="${escapeHtml(actionHref)}" style="display:inline-block;min-height:44px;line-height:44px;padding:0 22px;border-radius:8px;background:#4338ca;color:#ffffff;text-decoration:none;font-weight:700">${escapeHtml(actionLabel)}</a>`
     : '';
@@ -254,6 +261,9 @@ const createAccountEmailHtml = ({ actionHref, actionLabel, heading, message, not
     <title>${escapeHtml(heading)}</title>
   </head>
   <body style="margin:0;background:#f3f4f6;color:#111827;font-family:Arial,sans-serif">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">
+      ${escapeHtml(preheader)}
+    </div>
     <div lang="en" dir="ltr" style="max-width:560px;margin:0 auto;padding:32px 20px">
       <div style="border:1px solid #d1d5db;border-radius:12px;background:#ffffff;padding:28px">
         <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3">${escapeHtml(heading)}</h1>
@@ -335,6 +345,7 @@ const sendPasswordResetEmail = ({ email, resetUrl, tokenHash }) =>
       heading: 'Reset your Smart Brain password',
       message: 'A password reset was requested for your Smart Brain account. This link expires in 15 minutes.',
       notice: 'If you did not request this change, you can safely ignore this email.',
+      preheader: 'Use this secure link within 15 minutes to reset your Smart Brain password.',
     }),
     idempotencyKey: `password-reset/${tokenHash}`,
     subject: 'Reset your Smart Brain password',
@@ -356,6 +367,7 @@ const sendPasswordChangedEmail = ({ email }) =>
       heading: 'Your Smart Brain password was changed',
       message: 'Your Smart Brain password was successfully changed.',
       notice: 'If you did not make this change, contact the application owner immediately.',
+      preheader: 'Your Smart Brain account password was changed.',
     }),
     idempotencyKey: `password-changed/${randomBytes(16).toString('hex')}`,
     subject: 'Your Smart Brain password was changed',
