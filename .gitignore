@@ -30,9 +30,18 @@ dist-ssr/
 .env.*
 !.env.example
 
+# Local credentials and private keys
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+
 # Test and coverage output
 coverage
 *.lcov
+.nyc_output/
 playwright-report/
 test-results/
 
@@ -40,15 +49,28 @@ test-results/
 .cache/
 .vite/
 .eslintcache
+.oxlintcache
+vite.config.*.timestamp-*
 
 # Package manager/cache artifacts
+.npm/
 .pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+.pnp.*
 
 # Temporary/runtime files
 tmp/
 .tmp/
 *.pid
 *.pid.lock
+*.orig
+*.rej
+
+# Local email testing output
+.mail/
+mail-preview/
 
 # Local PostgreSQL data and database backups
 postgres-data/
@@ -58,6 +80,7 @@ exports/
 *.backup
 *.dump
 *.dump.gz
+*.pgdump
 *.sql.gz
 .pgpass
 pgpass.conf
