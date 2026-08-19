@@ -29,6 +29,9 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
+.envrc.local
 
 # Local credentials and private keys
 *.key
@@ -37,6 +40,7 @@ dist-ssr/
 *.pfx
 *.jks
 *.keystore
+*.secret
 
 # Test and coverage output
 coverage
@@ -44,6 +48,9 @@ coverage
 .nyc_output/
 playwright-report/
 test-results/
+blob-report/
+.playwright/
+playwright/.auth/
 
 # Tooling caches
 .cache/
@@ -94,6 +101,15 @@ docker-compose.override.yml
 
 # Local deployment state
 .vercel/
+.neon/
+
+# Local agent integration files
+.agents/
+.codex/
+.agent-browser/
+browser-state/
+auth-state*.json
+skills-lock.json
 
 # Local environment managers
 .direnv/

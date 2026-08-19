@@ -6,7 +6,6 @@ export const particleConfig = {
   v: isSmallPhone ? 0.1 : 0.3,
   radius: [2, 4],
   life: [1, 2],
-  v: 0.1,
   tha: [-180, 180],
   scale: [1, 2],
   position: 'all',

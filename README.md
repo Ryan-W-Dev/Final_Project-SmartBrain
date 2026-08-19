@@ -4,6 +4,8 @@ Smart Brain is a responsive React application that detects people in images. Use
 
 The browser communicates with an Express API, which keeps the Hugging Face token and all database access on the server.
 
+The production application is available at [smartbrain.ryanwynn.dev](https://smartbrain.ryanwynn.dev). Vercel hosts the Vite client and Express function, Neon provides PostgreSQL, and Resend delivers password-reset email from the verified `mail.ryanwynn.dev` subdomain.
+
 ## Features
 
 - Register with a name, properly formatted unique email address, and password confirmation
@@ -72,9 +74,10 @@ Email delivery is optional during local development. When `RESEND_API_KEY` and `
 Production password resets use Resend. Configure these values in the production environment:
 
 ```dotenv
-APP_URL=https://your-app.example
+APP_URL=https://smartbrain.ryanwynn.dev
 RESEND_API_KEY=re_your_resend_api_key
-RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
+RESEND_EMAIL_DOMAIN=mail.ryanwynn.dev
+RESET_EMAIL_FROM=Smart Brain <passwords@mail.ryanwynn.dev>
 ```
 
 `APP_URL` must use HTTPS, and `RESET_EMAIL_FROM` must use a sender domain verified in Resend. These values belong on the server and must not use the public `VITE_*` prefix.
@@ -87,6 +90,8 @@ RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
 - PostgreSQL 17
 - node-postgres (`pg`)
 - Docker Compose for the local database
+- Neon Postgres for the hosted database
+- Vercel for the Vite frontend and Express serverless function
 - Hugging Face Inference API
 - Resend email API for production password recovery
 - `particles-bg`
@@ -99,7 +104,7 @@ RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
 - Node.js and npm
 - Docker Desktop or another Docker Compose-compatible runtime
 - A Hugging Face access token with permission to use the configured inference model
-- A Resend account and verified sending domain when deploying password recovery to production
+- Vercel, Neon, and Resend accounts when deploying the hosted application
 
 ## Getting Started
 
@@ -126,6 +131,7 @@ DATABASE_SSL=false
 PORT=3001
 APP_URL=http://localhost:5173
 # RESEND_API_KEY=re_your_resend_api_key
+# RESEND_EMAIL_DOMAIN=mail.your-domain.example
 # RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
 ```
 
@@ -146,26 +152,60 @@ npm run dev
 - `npm run dev:server` — start only the API with file watching
 - `npm run db:start` — start the local PostgreSQL container
 - `npm run db:stop` — stop PostgreSQL without deleting its stored data
+- `npm run db:migrate` — apply `db/schema.sql`; prefers `DATABASE_URL_UNPOOLED` when available
 - `npm run build` — create the production client build
 - `npm run preview` — build and serve the production application locally
 - `npm start` — serve the existing `dist` build and API
 - `npm run lint` — run Oxlint
 
-## Production Configuration
+## Production Deployment
 
-For a hosted PostgreSQL provider, replace `DATABASE_URL` with the provider's connection string. Set `DATABASE_SSL=true` when the provider requires TLS.
+The repository is linked to the Vercel project `ryan-w-devs-projects/smart-brain`. Its production domain is `smartbrain.ryanwynn.dev`.
 
-The application requires `DATABASE_URL`, an HTTPS `APP_URL`, `RESEND_API_KEY`, and `RESET_EMAIL_FROM` when `NODE_ENV=production`.
+The following server-only variables are configured in Vercel:
+
+- `DATABASE_URL` — Neon pooled connection used by the application
+- `DATABASE_URL_UNPOOLED` — Neon direct connection used by migrations and database exports
+- `HF_TOKEN` — Hugging Face inference token
+- `APP_URL` — `https://smartbrain.ryanwynn.dev`
+- `RESEND_API_KEY` — Resend API credential
+- `RESEND_EMAIL_DOMAIN` — `mail.ryanwynn.dev`
+- `RESET_EMAIL_FROM` — `Smart Brain <passwords@mail.ryanwynn.dev>`
+
+Do not add these values to source control or rename them with a `VITE_*` prefix. Vite exposes `VITE_*` values to browser code.
+
+Apply database changes with the direct Neon connection:
+
+```bash
+vercel env run --environment production -- npm run db:migrate
+```
+
+Build and deploy the current working tree:
+
+```bash
+vercel pull --yes --environment=production
+vercel build --prod
+vercel deploy --prebuilt --prod
+```
+
+The Vercel project uses `api/index.js` as the serverless Express entry point and rewrites `/api/*` requests to that function. All other requests are served by the Vite build in `dist`.
+
+For another hosted PostgreSQL provider, set `DATABASE_URL` to its runtime connection string and `DATABASE_URL_UNPOOLED` to its direct migration connection when the provider offers both. Set `DATABASE_SSL=true` only when TLS is required and is not already specified by the connection URL.
 
 ## Project Structure
 
 ```text
 .
+├── api/
+│   └── index.js               Vercel Express function entry point
 ├── compose.yaml                 Local PostgreSQL service
-├── database.jsx                PostgreSQL connection and queries
+├── database.js                 PostgreSQL connection and queries
 ├── db/
-│   └── schema.sql              Users, sessions, and password reset schema
-├── server.jsx                  Express authentication and detection API
+│   └── schema.sql              Users, sessions, reset tokens, and rate limits
+├── scripts/
+│   └── migrate-database.mjs    Local or hosted schema migration command
+├── server.js                   Express authentication and detection API
+├── vercel.json                 Vercel build, function, and API rewrite config
 └── src/
     ├── App.jsx                 Application state and API integration
     ├── App.css                 Main and responsive layout
@@ -201,6 +241,7 @@ For device uploads, iPhone and Android users can select an image from their phot
 - Password reset tokens are cryptographically random, stored only as hashes, expire after 15 minutes, and can be used once.
 - A successful password reset invalidates all existing sessions for that account and requires a fresh sign-in.
 - Password reset requests return the same public message whether or not an email is registered and are rate-limited per email address.
+- Password reset rate limits are stored in PostgreSQL so they remain effective across serverless function instances.
 - SQL queries use parameters for user-provided values.
 - Profile-image and detection endpoints require an authenticated session.
 - Uploaded detection images are processed for detection but are not stored in PostgreSQL.

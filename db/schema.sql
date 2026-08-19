@@ -37,3 +37,12 @@ CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_index
   ON password_reset_tokens (user_id);
 CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_at_index
   ON password_reset_tokens (expires_at);
+
+CREATE TABLE IF NOT EXISTS password_reset_rate_limits (
+  email VARCHAR(320) PRIMARY KEY CHECK (email = LOWER(email)),
+  window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  request_count INTEGER NOT NULL DEFAULT 1 CHECK (request_count > 0)
+);
+
+CREATE INDEX IF NOT EXISTS password_reset_rate_limits_window_index
+  ON password_reset_rate_limits (window_started_at);

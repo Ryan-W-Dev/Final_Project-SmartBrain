@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import {
   closeDatabase,
+  consumePasswordResetRateLimit,
   createPasswordResetToken,
   createSession,
   createUser,
@@ -20,7 +21,7 @@ import {
   initializeDatabase,
   resetUserPassword,
   updateProfileImage,
-} from './database.jsx';
+} from './database.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 3001;
@@ -39,8 +40,6 @@ const modelUrl =
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 const supportedUploadTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u;
-const passwordResetRequestAttempts = new Map();
-let dummyPasswordHash = '';
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -70,6 +69,8 @@ const hashPassword = async (password) => {
     derivedKey.toString('hex'),
   ].join('$');
 };
+
+const dummyPasswordHashPromise = hashPassword('invalid-account-password');
 
 const verifyPassword = async (password, storedHash) => {
   const [algorithm, cost, blockSize, parallelization, saltHex, hashHex] = storedHash.split('$');
@@ -174,31 +175,16 @@ const validatePassword = (password) => {
   }
 };
 
-const enforcePasswordResetRateLimit = (email) => {
-  const now = Date.now();
+const enforcePasswordResetRateLimit = async (email) => {
+  const allowed = await consumePasswordResetRateLimit({
+    email,
+    maximum: passwordResetRateLimitMaximum,
+    windowMilliseconds: passwordResetRateLimitMilliseconds,
+  });
 
-  for (const [attemptedEmail, timestamps] of passwordResetRequestAttempts) {
-    const currentTimestamps = timestamps.filter(
-      (timestamp) => now - timestamp < passwordResetRateLimitMilliseconds
-    );
-
-    if (currentTimestamps.length) {
-      passwordResetRequestAttempts.set(attemptedEmail, currentTimestamps);
-    } else {
-      passwordResetRequestAttempts.delete(attemptedEmail);
-    }
-  }
-
-  const recentAttempts = (passwordResetRequestAttempts.get(email) || []).filter(
-    (timestamp) => now - timestamp < passwordResetRateLimitMilliseconds
-  );
-
-  if (recentAttempts.length >= passwordResetRateLimitMaximum) {
+  if (!allowed) {
     throw new HttpError(429, 'Too many password reset requests. Please try again later.');
   }
-
-  recentAttempts.push(now);
-  passwordResetRequestAttempts.set(email, recentAttempts);
 };
 
 const waitForPasswordResetResponseWindow = async (startedAt) => {
@@ -212,14 +198,16 @@ const waitForPasswordResetResponseWindow = async (startedAt) => {
 
 const getPasswordResetBaseUrl = () => {
   const configuredUrl = process.env.APP_URL?.trim();
+  const deploymentUrl = process.env.VERCEL_URL?.trim();
+  const resolvedUrl = configuredUrl || (deploymentUrl ? `https://${deploymentUrl}` : '');
 
-  if (!configuredUrl && process.env.NODE_ENV === 'production') {
+  if (!resolvedUrl && process.env.NODE_ENV === 'production') {
     throw new HttpError(503, 'Password reset email is temporarily unavailable.');
   }
 
   let baseUrl;
   try {
-    baseUrl = new URL(configuredUrl || 'http://localhost:5173');
+    baseUrl = new URL(resolvedUrl || 'http://localhost:5173');
   } catch {
     throw new HttpError(503, 'Password reset email is temporarily unavailable.');
   }
@@ -235,17 +223,55 @@ const getPasswordResetBaseUrl = () => {
 };
 
 const assertPasswordResetEmailAvailable = () => {
+  const emailDomain = process.env.RESEND_EMAIL_DOMAIN?.trim();
   if (
     process.env.NODE_ENV === 'production' &&
-    (!process.env.RESEND_API_KEY?.trim() || !process.env.RESET_EMAIL_FROM?.trim())
+    (!process.env.RESEND_API_KEY?.trim() ||
+      (!process.env.RESET_EMAIL_FROM?.trim() && !emailDomain))
   ) {
     throw new HttpError(503, 'Password reset email is temporarily unavailable.');
   }
 };
 
-const sendAccountEmail = async ({ idempotencyKey, subject, text, to }) => {
+const escapeHtml = (value) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const createAccountEmailHtml = ({ actionHref, actionLabel, heading, message, notice }) => {
+  const action = actionHref
+    ? `<a href="${escapeHtml(actionHref)}" style="display:inline-block;min-height:44px;line-height:44px;padding:0 22px;border-radius:8px;background:#4338ca;color:#ffffff;text-decoration:none;font-weight:700">${escapeHtml(actionLabel)}</a>`
+    : '';
+
+  return `<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${escapeHtml(heading)}</title>
+  </head>
+  <body style="margin:0;background:#f3f4f6;color:#111827;font-family:Arial,sans-serif">
+    <div lang="en" dir="ltr" style="max-width:560px;margin:0 auto;padding:32px 20px">
+      <div style="border:1px solid #d1d5db;border-radius:12px;background:#ffffff;padding:28px">
+        <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3">${escapeHtml(heading)}</h1>
+        <p style="margin:0 0 22px;font-size:16px;line-height:1.6">${escapeHtml(message)}</p>
+        ${action}
+        <p style="margin:22px 0 0;font-size:14px;line-height:1.6;color:#374151">${escapeHtml(notice)}</p>
+      </div>
+    </div>
+  </body>
+</html>`;
+};
+
+const sendAccountEmail = async ({ html, idempotencyKey, subject, text, to }) => {
   const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESET_EMAIL_FROM?.trim();
+  const emailDomain = process.env.RESEND_EMAIL_DOMAIN?.trim();
+  const from =
+    process.env.RESET_EMAIL_FROM?.trim() ||
+    (emailDomain ? `Smart Brain <passwords@${emailDomain}>` : '');
 
   if (!apiKey || !from) {
     if (process.env.NODE_ENV === 'production') {
@@ -254,27 +280,62 @@ const sendAccountEmail = async ({ idempotencyKey, subject, text, to }) => {
     return false;
   }
 
-  const emailResponse = await fetch('https://api.resend.com/emails', {
+  const requestOptions = {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'Idempotency-Key': idempotencyKey,
     },
-    body: JSON.stringify({ from, subject, text, to: [to] }),
-    signal: AbortSignal.timeout(15_000),
-  });
+    body: JSON.stringify({ from, html, subject, text, to: [to] }),
+  };
+  let lastError;
 
-  if (!emailResponse.ok) {
-    const providerMessage = await emailResponse.text().catch(() => '');
-    throw new Error(`Password reset email delivery failed (${emailResponse.status}). ${providerMessage}`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        ...requestOptions,
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (emailResponse.ok) {
+        return true;
+      }
+
+      const providerMessage = await emailResponse.text().catch(() => '');
+      lastError = new Error(
+        `Account email delivery failed (${emailResponse.status}). ${providerMessage}`
+      );
+
+      if (emailResponse.status !== 429 && emailResponse.status < 500) {
+        lastError.retryable = false;
+        throw lastError;
+      }
+    } catch (error) {
+      if (error?.retryable === false) {
+        throw error;
+      }
+      lastError = error;
+    }
+
+    if (attempt < 2) {
+      const delayMilliseconds = 500 * 2 ** attempt + Math.floor(Math.random() * 250);
+      await new Promise((resolve) => setTimeout(resolve, delayMilliseconds));
+    }
   }
 
-  return true;
+  throw lastError || new Error('Account email delivery failed.');
 };
 
 const sendPasswordResetEmail = ({ email, resetUrl, tokenHash }) =>
   sendAccountEmail({
+    html: createAccountEmailHtml({
+      actionHref: resetUrl,
+      actionLabel: 'Reset your Smart Brain password',
+      heading: 'Reset your Smart Brain password',
+      message: 'A password reset was requested for your Smart Brain account. This link expires in 15 minutes.',
+      notice: 'If you did not request this change, you can safely ignore this email.',
+    }),
     idempotencyKey: `password-reset/${tokenHash}`,
     subject: 'Reset your Smart Brain password',
     text: [
@@ -289,6 +350,13 @@ const sendPasswordResetEmail = ({ email, resetUrl, tokenHash }) =>
 
 const sendPasswordChangedEmail = ({ email }) =>
   sendAccountEmail({
+    html: createAccountEmailHtml({
+      actionHref: '',
+      actionLabel: '',
+      heading: 'Your Smart Brain password was changed',
+      message: 'Your Smart Brain password was successfully changed.',
+      notice: 'If you did not make this change, contact the application owner immediately.',
+    }),
     idempotencyKey: `password-changed/${randomBytes(16).toString('hex')}`,
     subject: 'Your Smart Brain password was changed',
     text: [
@@ -540,7 +608,7 @@ app.post('/api/auth/request-password-reset', async (request, response, next) => 
   try {
     const email = normalizeEmail(request.body?.email);
     validateEmail(email);
-    enforcePasswordResetRateLimit(email);
+    await enforcePasswordResetRateLimit(email);
     assertPasswordResetEmailAvailable();
 
     const baseUrl = getPasswordResetBaseUrl();
@@ -635,9 +703,10 @@ app.post('/api/auth/signin', async (request, response, next) => {
     }
 
     const credentials = await findUserCredentialsByEmail(email);
+    const passwordHash = credentials?.password_hash || (await dummyPasswordHashPromise);
     const passwordMatches = await verifyPassword(
       password,
-      credentials?.password_hash || dummyPasswordHash
+      passwordHash
     );
 
     if (!credentials || !passwordMatches) {
@@ -754,14 +823,18 @@ app.post('/api/detect-upload', async (request, response, next) => {
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const distDirectory = path.join(currentDirectory, 'dist');
-app.use(express.static(distDirectory));
-app.use((request, response, next) => {
-  if (request.method !== 'GET') {
-    next();
-    return;
-  }
-  response.sendFile(path.join(distDirectory, 'index.html'));
-});
+const isVercel = Boolean(process.env.VERCEL);
+
+if (!isVercel) {
+  app.use(express.static(distDirectory));
+  app.use((request, response, next) => {
+    if (request.method !== 'GET') {
+      next();
+      return;
+    }
+    response.sendFile(path.join(distDirectory, 'index.html'));
+  });
+}
 
 app.use((error, request, response, _next) => {
   const isTooLarge = error?.type === 'entity.too.large';
@@ -788,7 +861,7 @@ app.use((error, request, response, _next) => {
 
 const startServer = async () => {
   await initializeDatabase();
-  dummyPasswordHash = await hashPassword('invalid-account-password');
+  await dummyPasswordHashPromise;
 
   app.listen(port, () => {
     console.log(`Smart Brain server listening on http://localhost:${port}`);
@@ -800,10 +873,14 @@ const shutdown = async () => {
   process.exit(0);
 };
 
-process.once('SIGINT', shutdown);
-process.once('SIGTERM', shutdown);
+if (!isVercel) {
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
 
-startServer().catch((error) => {
-  console.error('Smart Brain could not start:', error);
-  process.exitCode = 1;
-});
+  startServer().catch((error) => {
+    console.error('Smart Brain could not start:', error);
+    process.exitCode = 1;
+  });
+}
+
+export default app;

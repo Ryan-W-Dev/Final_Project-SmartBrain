@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { attachDatabasePool } from '@vercel/functions';
 import pg from 'pg';
+
+// This backend module uses standard JavaScript so Node can load it directly.
 
 const { Pool } = pg;
 const localDatabaseUrl = 'postgresql://smartbrain:smartbrain@localhost:5432/smartbrain';
@@ -20,6 +23,10 @@ const pool = new Pool({
 pool.on('error', (error) => {
   console.error('Unexpected PostgreSQL pool error:', error);
 });
+
+if (process.env.VERCEL) {
+  attachDatabasePool(pool);
+}
 
 const rankedUserQuery = `
   WITH ranked_users AS (
@@ -45,6 +52,10 @@ export const initializeDatabase = async () => {
   await pool.query(schema);
   await pool.query('DELETE FROM sessions WHERE expires_at <= NOW()');
   await pool.query('DELETE FROM password_reset_tokens WHERE expires_at <= NOW()');
+  await pool.query(
+    `DELETE FROM password_reset_rate_limits
+     WHERE window_started_at <= NOW() - INTERVAL '1 day'`
+  );
 };
 
 export const createUser = async ({ email, name, passwordHash, profileImage }) => {
@@ -72,6 +83,37 @@ export const findUserCredentialsByEmail = async (email) => {
   ]);
 
   return result.rows[0] || null;
+};
+
+export const consumePasswordResetRateLimit = async ({
+  email,
+  maximum,
+  windowMilliseconds,
+}) => {
+  const result = await pool.query(
+    `
+      INSERT INTO password_reset_rate_limits (email, window_started_at, request_count)
+      VALUES ($1, NOW(), 1)
+      ON CONFLICT (email) DO UPDATE
+      SET
+        window_started_at = CASE
+          WHEN password_reset_rate_limits.window_started_at <=
+            NOW() - ($2::DOUBLE PRECISION * INTERVAL '1 millisecond')
+          THEN NOW()
+          ELSE password_reset_rate_limits.window_started_at
+        END,
+        request_count = CASE
+          WHEN password_reset_rate_limits.window_started_at <=
+            NOW() - ($2::DOUBLE PRECISION * INTERVAL '1 millisecond')
+          THEN 1
+          ELSE password_reset_rate_limits.request_count + 1
+        END
+      RETURNING request_count
+    `,
+    [email, windowMilliseconds]
+  );
+
+  return Number(result.rows[0].request_count) <= maximum;
 };
 
 export const createPasswordResetToken = async ({ expiresAt, tokenHash, userId }) => {
