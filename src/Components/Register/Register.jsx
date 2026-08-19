@@ -223,6 +223,14 @@ const Register = ({ authError, isLoading, onRegister, onRouteChange }) => {
               Cancel
             </button>
           </div>
+          <button
+            className="register-reset-password"
+            disabled={isLoading}
+            onClick={() => onRouteChange('forgot-password')}
+            type="button"
+          >
+            Already have an account? Reset password
+          </button>
         </form>
       </section>
     </div>

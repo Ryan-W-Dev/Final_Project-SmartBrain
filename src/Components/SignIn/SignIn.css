@@ -66,6 +66,29 @@
   text-align: center;
 }
 
+.sign-in-reset-password {
+  align-self: center;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: #007a99;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sign-in-reset-password:hover {
+  color: #b000a0;
+}
+
+.sign-in-reset-password:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 @media (max-width: 680px) {
   .sign-in-page {
     padding: 78px 10px 24px;

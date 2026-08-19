@@ -10,6 +10,10 @@ import FaceRecognition from './Components/FaceRecognition/FaceRecognition';
 import SignIn from './Components/SignIn/SignIn';
 import Register from './Components/Register/Register';
 import ProfileImageEditor from './Components/ProfileImageEditor/ProfileImageEditor';
+import {
+  PasswordReset,
+  PasswordResetRequest,
+} from './Components/PasswordReset/PasswordReset';
 
 const MAX_DETECTION_IMAGE_BYTES = 10 * 1024 * 1024;
 const SUPPORTED_DETECTION_IMAGE_TYPES = new Set([
@@ -70,6 +74,7 @@ const authenticatedUserState = (user) => ({
   isSignedIn: true,
   hasCustomProfileImage: Boolean(user.profileImageSrc),
   profileImageSrc: user.profileImageSrc || DEFAULT_PROFILE_IMAGE,
+  passwordResetToken: '',
   rank: user.rank,
   route: 'home',
   userName: user.name,
@@ -78,6 +83,10 @@ const authenticatedUserState = (user) => ({
 class App extends Component {
   constructor() {
     super();
+    const passwordResetToken =
+      typeof window === 'undefined'
+        ? ''
+        : new URLSearchParams(window.location.search).get('resetToken') || '';
     this.state = {
       input: '',
       imageUrl: '',
@@ -85,7 +94,7 @@ class App extends Component {
       detections: [],
       error: '',
       isLoading: false,
-      route: 'signin',
+      route: passwordResetToken ? 'reset-password' : 'signin',
       isSignedIn: false,
       isAuthLoading: false,
       isSessionLoading: true,
@@ -95,8 +104,28 @@ class App extends Component {
       userName: 'User',
       rank: 1,
       detectionCount: 0,
+      passwordResetToken,
     };
   }
+
+  clearPasswordResetTokenFromUrl = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('resetToken')) {
+      return;
+    }
+
+    url.searchParams.delete('resetToken');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  applyAuthenticatedUser = (user) => {
+    this.clearPasswordResetTokenFromUrl();
+    this.setState(authenticatedUserState(user));
+  };
 
   createClarifaiBoundingBox = (pixelBox, imageWidth, imageHeight) => {
     return {
@@ -157,7 +186,12 @@ class App extends Component {
       const result = await response.json().catch(() => ({}));
 
       if (response.ok && result.user) {
-        this.setState(authenticatedUserState(result.user));
+        if (this.state.passwordResetToken) {
+          this.setState({ isSessionLoading: false });
+          return;
+        }
+
+        this.applyAuthenticatedUser(result.user);
         return;
       }
 
@@ -192,7 +226,7 @@ class App extends Component {
         body: JSON.stringify(registration),
       });
       const user = await this.readAuthResponse(response);
-      this.setState(authenticatedUserState(user));
+      this.applyAuthenticatedUser(user);
     } catch (error) {
       this.setState({
         authError: error instanceof Error ? error.message : 'Registration failed.',
@@ -211,7 +245,7 @@ class App extends Component {
         body: JSON.stringify(credentials),
       });
       const user = await this.readAuthResponse(response);
-      this.setState(authenticatedUserState(user));
+      this.applyAuthenticatedUser(user);
     } catch (error) {
       this.setState({
         authError: error instanceof Error ? error.message : 'Sign-in failed.',
@@ -235,6 +269,7 @@ class App extends Component {
         isSignedIn: false,
         hasCustomProfileImage: false,
         profileImageSrc: DEFAULT_PROFILE_IMAGE,
+        passwordResetToken: '',
         rank: 1,
         route: 'signin',
         userName: 'User',
@@ -248,7 +283,20 @@ class App extends Component {
       return;
     }
 
-    this.setState({ authError: '', route });
+    if (route !== 'reset-password') {
+      this.clearPasswordResetTokenFromUrl();
+    }
+
+    this.setState({
+      authError: '',
+      passwordResetToken: route === 'reset-password' ? this.state.passwordResetToken : '',
+      route,
+    });
+  };
+
+  onPasswordResetComplete = () => {
+    this.clearPasswordResetTokenFromUrl();
+    this.setState({ authError: '', passwordResetToken: '', route: 'signin' });
   };
 
   onInputChange = (event) => {
@@ -411,6 +459,7 @@ class App extends Component {
       isSessionLoading,
       isSignedIn,
       profileImageSrc,
+      passwordResetToken,
       rank,
       route,
       userName,
@@ -456,6 +505,14 @@ class App extends Component {
                   isLoading={isAuthLoading}
                   onRegister={this.onRegister}
                   onRouteChange={this.onRouteChange}
+                />
+              ) : route === 'forgot-password' ? (
+                <PasswordResetRequest onRouteChange={this.onRouteChange} />
+              ) : route === 'reset-password' && passwordResetToken ? (
+                <PasswordReset
+                  onComplete={this.onPasswordResetComplete}
+                  onRouteChange={this.onRouteChange}
+                  token={passwordResetToken}
                 />
               ) : (
                 <SignIn

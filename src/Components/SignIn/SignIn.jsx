@@ -69,6 +69,14 @@ const SignIn = ({ authError, isLoading, onRouteChange, onSignIn }) => {
               Register
             </button>
           </div>
+          <button
+            className="sign-in-reset-password"
+            disabled={isLoading}
+            onClick={() => onRouteChange('forgot-password')}
+            type="button"
+          >
+            Forgot your password? Reset password
+          </button>
         </form>
       </section>
     </div>

@@ -9,6 +9,8 @@ The browser communicates with an Express API, which keeps the Hugging Face token
 - Register with a name, properly formatted unique email address, and password confirmation
 - Sign in only when the submitted email and password match a registered account
 - Secure scrypt password hashing and database-backed HTTP-only sessions
+- Password recovery links on both the sign-in and registration screens
+- Single-use, 15-minute password reset tokens delivered by email
 - Optional profile picture during registration, with a default image when none is selected
 - Update or reset a profile picture from a click/tap menu inside the signed-in profile image
 - Preview profile-picture changes, then explicitly save or cancel them
@@ -57,6 +59,7 @@ Saved changes update the authenticated user's PostgreSQL record. The saved pictu
 - node-postgres (`pg`)
 - Docker Compose for the local database
 - Hugging Face Inference API
+- Resend email API for production password recovery
 - `particles-bg`
 - `react-parallax-tilt`
 - Oxlint
@@ -91,9 +94,14 @@ HF_TOKEN=hf_your_new_token
 DATABASE_URL=postgresql://smartbrain:smartbrain@localhost:5432/smartbrain
 DATABASE_SSL=false
 PORT=3001
+APP_URL=http://localhost:5173
+# RESEND_API_KEY=re_your_resend_api_key
+# RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
 ```
 
 Never commit `.env`. Do not expose the Hugging Face token through a `VITE_*` variable because Vite variables are included in browser code.
+
+For local development, password reset works without an email provider: after a registered email is submitted, the confirmation screen displays a local reset link. For production, set `APP_URL` to the application's public HTTPS address and configure `RESEND_API_KEY` plus `RESET_EMAIL_FROM`. The sender must use a domain you have verified with Resend.
 
 4. Start the Vite client and Express API together:
 
@@ -128,7 +136,7 @@ The application requires `DATABASE_URL` when `NODE_ENV=production`.
 ├── compose.yaml                 Local PostgreSQL service
 ├── database.jsx                PostgreSQL connection and queries
 ├── db/
-│   └── schema.sql              Users and sessions schema
+│   └── schema.sql              Users, sessions, and password reset schema
 ├── server.jsx                  Express authentication and detection API
 └── src/
     ├── App.jsx                 Application state and API integration
@@ -142,6 +150,7 @@ The application requires `DATABASE_URL` when `NODE_ENV=production`.
         ├── Logo/               Profile image display and tilt effect
         ├── Navigation/         Signed-in navigation
         ├── ParticlesConfig/    Responsive particle configuration
+        ├── PasswordReset/      Password recovery request and update forms
         ├── ProfileImageEditor/ Signed-in profile picture updates
         ├── Rank/               User rank and detection total
         ├── Register/           Account registration form
@@ -161,6 +170,9 @@ For device uploads, iPhone and Android users can select an image from their phot
 - User emails are normalized and uniquely indexed in PostgreSQL.
 - Password hashes, never plaintext passwords, are stored in the database.
 - Session tokens are stored in the browser as HTTP-only cookies; only token hashes are persisted.
+- Password reset tokens are cryptographically random, stored only as hashes, expire after 15 minutes, and can be used once.
+- A successful password reset invalidates all existing sessions for that account and requires a fresh sign-in.
+- Password reset requests return the same public message whether or not an email is registered and are rate-limited per email address.
 - SQL queries use parameters for user-provided values.
 - Profile-image and detection endpoints require an authenticated session.
 - Uploaded detection images are processed for detection but are not stored in PostgreSQL.

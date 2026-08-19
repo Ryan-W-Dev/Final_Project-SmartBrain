@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import {
   closeDatabase,
+  createPasswordResetToken,
   createSession,
   createUser,
   deleteSession,
@@ -17,6 +18,7 @@ import {
   getUserBySession,
   incrementDetectionCount,
   initializeDatabase,
+  resetUserPassword,
   updateProfileImage,
 } from './database.jsx';
 
@@ -25,6 +27,10 @@ const port = Number(process.env.PORT) || 3001;
 const maxImageBytes = 10 * 1024 * 1024;
 const maxProfileImageBytes = 5 * 1024 * 1024;
 const sessionDurationMilliseconds = 7 * 24 * 60 * 60 * 1000;
+const passwordResetDurationMilliseconds = 15 * 60 * 1000;
+const passwordResetRateLimitMilliseconds = 15 * 60 * 1000;
+const passwordResetRateLimitMaximum = 5;
+const passwordResetMinimumResponseMilliseconds = 500;
 const sessionCookieName = 'smartbrain_session';
 const scryptAsync = promisify(scrypt);
 const modelUrl =
@@ -33,6 +39,7 @@ const modelUrl =
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 const supportedUploadTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/u;
+const passwordResetRequestAttempts = new Map();
 let dummyPasswordHash = '';
 
 class HttpError extends Error {
@@ -166,6 +173,131 @@ const validatePassword = (password) => {
     throw new HttpError(400, 'Password must be between 8 and 128 characters.');
   }
 };
+
+const enforcePasswordResetRateLimit = (email) => {
+  const now = Date.now();
+
+  for (const [attemptedEmail, timestamps] of passwordResetRequestAttempts) {
+    const currentTimestamps = timestamps.filter(
+      (timestamp) => now - timestamp < passwordResetRateLimitMilliseconds
+    );
+
+    if (currentTimestamps.length) {
+      passwordResetRequestAttempts.set(attemptedEmail, currentTimestamps);
+    } else {
+      passwordResetRequestAttempts.delete(attemptedEmail);
+    }
+  }
+
+  const recentAttempts = (passwordResetRequestAttempts.get(email) || []).filter(
+    (timestamp) => now - timestamp < passwordResetRateLimitMilliseconds
+  );
+
+  if (recentAttempts.length >= passwordResetRateLimitMaximum) {
+    throw new HttpError(429, 'Too many password reset requests. Please try again later.');
+  }
+
+  recentAttempts.push(now);
+  passwordResetRequestAttempts.set(email, recentAttempts);
+};
+
+const waitForPasswordResetResponseWindow = async (startedAt) => {
+  const remainingMilliseconds =
+    passwordResetMinimumResponseMilliseconds - (Date.now() - startedAt);
+
+  if (remainingMilliseconds > 0) {
+    await new Promise((resolve) => setTimeout(resolve, remainingMilliseconds));
+  }
+};
+
+const getPasswordResetBaseUrl = () => {
+  const configuredUrl = process.env.APP_URL?.trim();
+
+  if (!configuredUrl && process.env.NODE_ENV === 'production') {
+    throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+  }
+
+  let baseUrl;
+  try {
+    baseUrl = new URL(configuredUrl || 'http://localhost:5173');
+  } catch {
+    throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+  }
+
+  if (!['http:', 'https:'].includes(baseUrl.protocol)) {
+    throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+  }
+  if (process.env.NODE_ENV === 'production' && baseUrl.protocol !== 'https:') {
+    throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+  }
+
+  return baseUrl;
+};
+
+const assertPasswordResetEmailAvailable = () => {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    (!process.env.RESEND_API_KEY?.trim() || !process.env.RESET_EMAIL_FROM?.trim())
+  ) {
+    throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+  }
+};
+
+const sendAccountEmail = async ({ idempotencyKey, subject, text, to }) => {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.RESET_EMAIL_FROM?.trim();
+
+  if (!apiKey || !from) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new HttpError(503, 'Password reset email is temporarily unavailable.');
+    }
+    return false;
+  }
+
+  const emailResponse = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify({ from, subject, text, to: [to] }),
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!emailResponse.ok) {
+    const providerMessage = await emailResponse.text().catch(() => '');
+    throw new Error(`Password reset email delivery failed (${emailResponse.status}). ${providerMessage}`);
+  }
+
+  return true;
+};
+
+const sendPasswordResetEmail = ({ email, resetUrl, tokenHash }) =>
+  sendAccountEmail({
+    idempotencyKey: `password-reset/${tokenHash}`,
+    subject: 'Reset your Smart Brain password',
+    text: [
+      'A password reset was requested for your Smart Brain account.',
+      '',
+      `Reset your password within 15 minutes: ${resetUrl}`,
+      '',
+      'If you did not request this change, you can ignore this email.',
+    ].join('\n'),
+    to: email,
+  });
+
+const sendPasswordChangedEmail = ({ email }) =>
+  sendAccountEmail({
+    idempotencyKey: `password-changed/${randomBytes(16).toString('hex')}`,
+    subject: 'Your Smart Brain password was changed',
+    text: [
+      'Your Smart Brain password was successfully changed.',
+      '',
+      'If you did not make this change, contact the application owner immediately.',
+    ].join('\n'),
+    to: email,
+  });
 
 const parseProfileImage = (value) => {
   if (!value) {
@@ -398,6 +530,93 @@ app.post('/api/auth/register', async (request, response, next) => {
       next(new HttpError(409, 'An account with that email already exists.'));
       return;
     }
+    next(error);
+  }
+});
+
+app.post('/api/auth/request-password-reset', async (request, response, next) => {
+  const startedAt = Date.now();
+
+  try {
+    const email = normalizeEmail(request.body?.email);
+    validateEmail(email);
+    enforcePasswordResetRateLimit(email);
+    assertPasswordResetEmailAvailable();
+
+    const baseUrl = getPasswordResetBaseUrl();
+    const credentials = await findUserCredentialsByEmail(email);
+    let developmentResetUrl;
+
+    if (credentials) {
+      const token = randomBytes(32).toString('hex');
+      const tokenHash = hashSessionToken(token);
+      const expiresAt = new Date(Date.now() + passwordResetDurationMilliseconds);
+      baseUrl.searchParams.set('resetToken', token);
+      baseUrl.hash = '';
+      const resetUrl = baseUrl.toString();
+
+      await createPasswordResetToken({ expiresAt, tokenHash, userId: credentials.id });
+
+      try {
+        const emailSent = await sendPasswordResetEmail({ email, resetUrl, tokenHash });
+        if (!emailSent && process.env.NODE_ENV !== 'production') {
+          developmentResetUrl = resetUrl;
+          console.log(`Development password reset link for ${email}: ${resetUrl}`);
+        }
+      } catch (emailError) {
+        console.error('Password reset email could not be delivered:', emailError);
+        if (process.env.NODE_ENV !== 'production') {
+          developmentResetUrl = resetUrl;
+        }
+      }
+    }
+
+    await waitForPasswordResetResponseWindow(startedAt);
+    response.set('Cache-Control', 'no-store');
+    response.json({
+      message: 'If an account exists for that email, a password reset link has been sent.',
+      ...(developmentResetUrl ? { developmentResetUrl } : {}),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/auth/reset-password', async (request, response, next) => {
+  try {
+    const token = typeof request.body?.token === 'string' ? request.body.token.trim() : '';
+    const { confirmPassword, password } = request.body || {};
+
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      throw new HttpError(400, 'This password reset link is invalid or has expired.');
+    }
+
+    validatePassword(password);
+    if (password !== confirmPassword) {
+      throw new HttpError(400, 'Passwords do not match.');
+    }
+
+    const passwordHash = await hashPassword(password);
+    const account = await resetUserPassword({
+      passwordHash,
+      tokenHash: hashSessionToken(token),
+    });
+
+    if (!account) {
+      throw new HttpError(400, 'This password reset link is invalid or has expired.');
+    }
+
+    clearSessionCookie(response);
+
+    try {
+      await sendPasswordChangedEmail({ email: account.email });
+    } catch (emailError) {
+      console.error('Password change confirmation email could not be delivered:', emailError);
+    }
+
+    response.set('Cache-Control', 'no-store');
+    response.json({ message: 'Your password has been reset. You can now sign in.' });
+  } catch (error) {
     next(error);
   }
 });

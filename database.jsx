@@ -44,6 +44,7 @@ export const initializeDatabase = async () => {
   const schema = await readFile(schemaPath, 'utf8');
   await pool.query(schema);
   await pool.query('DELETE FROM sessions WHERE expires_at <= NOW()');
+  await pool.query('DELETE FROM password_reset_tokens WHERE expires_at <= NOW()');
 };
 
 export const createUser = async ({ email, name, passwordHash, profileImage }) => {
@@ -71,6 +72,63 @@ export const findUserCredentialsByEmail = async (email) => {
   ]);
 
   return result.rows[0] || null;
+};
+
+export const createPasswordResetToken = async ({ expiresAt, tokenHash, userId }) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM password_reset_tokens WHERE expires_at <= NOW() OR user_id = $1', [
+      userId,
+    ]);
+    await client.query(
+      'INSERT INTO password_reset_tokens (token_hash, user_id, expires_at) VALUES ($1, $2, $3)',
+      [tokenHash, userId, expiresAt]
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const resetUserPassword = async ({ passwordHash, tokenHash }) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const tokenResult = await client.query(
+      `
+        SELECT password_reset_tokens.user_id, users.email
+        FROM password_reset_tokens
+        INNER JOIN users ON users.id = password_reset_tokens.user_id
+        WHERE password_reset_tokens.token_hash = $1
+          AND password_reset_tokens.expires_at > NOW()
+        FOR UPDATE OF password_reset_tokens
+      `,
+      [tokenHash]
+    );
+
+    if (!tokenResult.rows[0]) {
+      await client.query('ROLLBACK');
+      return false;
+    }
+
+    const { email, user_id: userId } = tokenResult.rows[0];
+    await client.query('UPDATE users SET password_hash = $2 WHERE id = $1', [userId, passwordHash]);
+    await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+    await client.query('DELETE FROM sessions WHERE user_id = $1', [userId]);
+    await client.query('COMMIT');
+    return { email, userId };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const getUserById = async (userId) => {
