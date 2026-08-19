@@ -1,27 +1,79 @@
-import { useRef, useState } from 'react';
-import Logo from '../Logo/Logo';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Logo, { DEFAULT_PROFILE_IMAGE } from '../Logo/Logo';
 import './ProfileImageEditor.css';
 
 const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 const SUPPORTED_PROFILE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
-const ProfileImageEditor = ({ hasCustomImage, imageSrc, onUpdate }) => {
+const ProfileImageEditor = ({ imageSrc, onUpdate }) => {
   const [error, setError] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingAction, setPendingAction] = useState('');
   const [selectedImage, setSelectedImage] = useState('');
-  const [selectedName, setSelectedName] = useState('');
   const [status, setStatus] = useState('');
+  const editorRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const clearSelection = () => {
+  const clearPendingChange = useCallback(() => {
+    setPendingAction('');
     setSelectedImage('');
-    setSelectedName('');
     setIsReading(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    if (isSaving) {
+      return;
+    }
+
+    clearPendingChange();
+    setError('');
+    setIsMenuOpen(false);
+  }, [clearPendingChange, isSaving]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return undefined;
+    }
+
+    const onPointerDown = (event) => {
+      if (!editorRef.current?.contains(event.target)) {
+        closeMenu();
+      }
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [closeMenu, isMenuOpen]);
+
+  const toggleMenu = () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (isMenuOpen) {
+      closeMenu();
+      return;
+    }
+
+    setError('');
+    setStatus('');
+    setIsMenuOpen(true);
   };
 
   const onImageChange = (event) => {
@@ -30,39 +82,56 @@ const ProfileImageEditor = ({ hasCustomImage, imageSrc, onUpdate }) => {
     setStatus('');
 
     if (!file) {
-      clearSelection();
+      clearPendingChange();
       return;
     }
 
     if (!SUPPORTED_PROFILE_IMAGE_TYPES.includes(file.type)) {
-      clearSelection();
+      clearPendingChange();
       setError('Choose a JPG, PNG, WebP, or GIF image.');
       return;
     }
 
     if (file.size > MAX_PROFILE_IMAGE_BYTES) {
-      clearSelection();
+      clearPendingChange();
       setError('Choose an image smaller than 5 MB.');
       return;
     }
 
     setIsReading(true);
-    setSelectedName(file.name);
 
     const reader = new FileReader();
     reader.onload = () => {
-      setSelectedImage(typeof reader.result === 'string' ? reader.result : '');
+      if (typeof reader.result !== 'string') {
+        clearPendingChange();
+        setError('That image could not be read. Please choose another image.');
+        return;
+      }
+
+      setSelectedImage(reader.result);
+      setPendingAction('upload');
       setIsReading(false);
     };
     reader.onerror = () => {
-      clearSelection();
+      clearPendingChange();
       setError('That image could not be read. Please choose another image.');
     };
     reader.readAsDataURL(file);
   };
 
+  const chooseDefaultImage = () => {
+    setError('');
+    setStatus('');
+    setSelectedImage('');
+    setPendingAction('default');
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const saveImage = async () => {
-    if (!selectedImage) {
+    if (!pendingAction || (pendingAction === 'upload' && !selectedImage)) {
       return;
     }
 
@@ -71,9 +140,15 @@ const ProfileImageEditor = ({ hasCustomImage, imageSrc, onUpdate }) => {
     setIsSaving(true);
 
     try {
-      await onUpdate(selectedImage);
-      clearSelection();
-      setStatus('Profile picture updated.');
+      await onUpdate(pendingAction === 'default' ? '' : selectedImage);
+      const successMessage =
+        pendingAction === 'default'
+          ? 'The default profile picture is now being used.'
+          : 'Profile picture updated.';
+
+      clearPendingChange();
+      setIsMenuOpen(false);
+      setStatus(successMessage);
     } catch (updateError) {
       setError(
         updateError instanceof Error
@@ -85,85 +160,105 @@ const ProfileImageEditor = ({ hasCustomImage, imageSrc, onUpdate }) => {
     }
   };
 
-  const useDefaultImage = async () => {
-    setError('');
-    setStatus('');
-    setIsSaving(true);
-
-    try {
-      await onUpdate('');
-      clearSelection();
-      setStatus('The default profile picture is now being used.');
-    } catch (updateError) {
-      setError(
-        updateError instanceof Error
-          ? updateError.message
-          : 'Your profile picture could not be updated.'
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+  const previewImage =
+    pendingAction === 'default' ? DEFAULT_PROFILE_IMAGE : selectedImage || imageSrc;
   const isBusy = isReading || isSaving;
 
   return (
-    <div className="profile-image-editor">
-      <Logo imageSrc={selectedImage || imageSrc} />
-      <div className="profile-image-controls">
-        <input
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          className="profile-image-input"
-          disabled={isBusy}
-          id="profile-image-update"
-          onChange={onImageChange}
-          ref={fileInputRef}
-          type="file"
-        />
-        <label
-          aria-disabled={isBusy}
-          className={`btn profile-image-picker${isBusy ? ' is-disabled' : ''}`}
-          htmlFor="profile-image-update"
+    <div className="profile-image-editor" ref={editorRef}>
+      <div className={`profile-image-frame${isMenuOpen ? ' is-menu-open' : ''}`}>
+        <Logo imageSrc={previewImage} />
+        <button
+          aria-controls="profile-image-menu"
+          aria-expanded={isMenuOpen}
+          aria-haspopup="menu"
+          aria-label="Change your profile picture"
+          className="profile-image-toggle"
+          disabled={isSaving}
+          onClick={toggleMenu}
+          type="button"
         >
-          {isReading ? 'Reading image…' : 'Change profile picture'}
-        </label>
-        <p className="profile-image-hint">JPG, PNG, WebP, or GIF up to 5 MB.</p>
-        {selectedName ? <p className="profile-image-name">Selected: {selectedName}</p> : null}
-        {selectedImage ? (
-          <div className="profile-image-actions">
-            <button className="btn" disabled={isSaving} onClick={saveImage} type="button">
-              {isSaving ? 'Saving…' : 'Save picture'}
-            </button>
-            <button
-              className="profile-image-text-button"
-              disabled={isSaving}
-              onClick={clearSelection}
-              type="button"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : hasCustomImage ? (
-          <button
-            className="profile-image-text-button"
-            disabled={isSaving}
-            onClick={useDefaultImage}
-            type="button"
+          <span>Click image to change your profile picture</span>
+        </button>
+
+        {isMenuOpen ? (
+          <div
+            aria-label="Profile picture options"
+            className="profile-image-menu"
+            id="profile-image-menu"
+            role="menu"
           >
-            {isSaving ? 'Updating…' : 'Use default image'}
-          </button>
-        ) : null}
-        {error ? (
-          <p className="profile-image-message is-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {status ? (
-          <p className="profile-image-message is-success" role="status">
-            {status}
-          </p>
+            {!pendingAction ? (
+              <>
+                <button
+                  className="profile-image-menu-link"
+                  disabled={isBusy}
+                  onClick={() => fileInputRef.current?.click()}
+                  role="menuitem"
+                  type="button"
+                >
+                  {isReading ? 'Reading image…' : 'Change profile image'}
+                </button>
+                <button
+                  className="profile-image-menu-link"
+                  disabled={isBusy}
+                  onClick={chooseDefaultImage}
+                  role="menuitem"
+                  type="button"
+                >
+                  Use default image
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="profile-image-ready">
+                  {pendingAction === 'default' ? 'Default image selected' : 'New image selected'}
+                </span>
+                <div className="profile-image-menu-actions">
+                  <button
+                    className="profile-image-save"
+                    disabled={isSaving}
+                    onClick={saveImage}
+                    role="menuitem"
+                    type="button"
+                  >
+                    {isSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    className="profile-image-menu-link"
+                    disabled={isSaving}
+                    onClick={clearPendingChange}
+                    role="menuitem"
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         ) : null}
       </div>
+
+      <input
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="profile-image-input"
+        disabled={isBusy}
+        onChange={onImageChange}
+        ref={fileInputRef}
+        type="file"
+      />
+
+      {error ? (
+        <p className="profile-image-message is-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {status ? (
+        <p className="profile-image-message is-success" role="status">
+          {status}
+        </p>
+      ) : null}
     </div>
   );
 };
