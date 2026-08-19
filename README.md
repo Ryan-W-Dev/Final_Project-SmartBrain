@@ -50,6 +50,35 @@ Selecting a replacement or the default image stages a preview. The account is no
 
 Saved changes update the authenticated user's PostgreSQL record. The saved picture is returned with a fresh, non-cached image URL during future sign-ins so the most recent version is displayed.
 
+## Password Reset
+
+The **Reset password** option is available from both the sign-in and registration screens.
+
+1. Enter the email address associated with the account.
+2. Open the reset link sent to that address.
+3. Enter and confirm a new password of 8–128 characters.
+4. Return to the sign-in screen and use the new password.
+
+Reset links expire after 15 minutes and can only be used once. Requesting another link invalidates the account's previous link. After a successful reset, every existing session for that account is invalidated, so the user must sign in again on each device.
+
+The public response does not reveal whether an email address is registered. Requests are limited to five attempts per email address within 15 minutes.
+
+### Local password-reset testing
+
+Email delivery is optional during local development. When `RESEND_API_KEY` and `RESET_EMAIL_FROM` are not configured, submitting a registered email displays an **Open the local reset link** link on the confirmation screen.
+
+### Production email delivery
+
+Production password resets use Resend. Configure these values in the production environment:
+
+```dotenv
+APP_URL=https://your-app.example
+RESEND_API_KEY=re_your_resend_api_key
+RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
+```
+
+`APP_URL` must use HTTPS, and `RESET_EMAIL_FROM` must use a sender domain verified in Resend. These values belong on the server and must not use the public `VITE_*` prefix.
+
 ## Tech Stack
 
 - React 19
@@ -70,6 +99,7 @@ Saved changes update the authenticated user's PostgreSQL record. The saved pictu
 - Node.js and npm
 - Docker Desktop or another Docker Compose-compatible runtime
 - A Hugging Face access token with permission to use the configured inference model
+- A Resend account and verified sending domain when deploying password recovery to production
 
 ## Getting Started
 
@@ -99,9 +129,7 @@ APP_URL=http://localhost:5173
 # RESET_EMAIL_FROM=Smart Brain <passwords@your-verified-domain.example>
 ```
 
-Never commit `.env`. Do not expose the Hugging Face token through a `VITE_*` variable because Vite variables are included in browser code.
-
-For local development, password reset works without an email provider: after a registered email is submitted, the confirmation screen displays a local reset link. For production, set `APP_URL` to the application's public HTTPS address and configure `RESEND_API_KEY` plus `RESET_EMAIL_FROM`. The sender must use a domain you have verified with Resend.
+Never commit `.env`. Do not expose the Hugging Face or Resend token through a `VITE_*` variable because Vite variables are included in browser code. See [Password Reset](#password-reset) for local testing and production email configuration.
 
 4. Start the Vite client and Express API together:
 
@@ -123,11 +151,11 @@ npm run dev
 - `npm start` — serve the existing `dist` build and API
 - `npm run lint` — run Oxlint
 
-## Production Database
+## Production Configuration
 
 For a hosted PostgreSQL provider, replace `DATABASE_URL` with the provider's connection string. Set `DATABASE_SSL=true` when the provider requires TLS.
 
-The application requires `DATABASE_URL` when `NODE_ENV=production`.
+The application requires `DATABASE_URL`, an HTTPS `APP_URL`, `RESEND_API_KEY`, and `RESET_EMAIL_FROM` when `NODE_ENV=production`.
 
 ## Project Structure
 
