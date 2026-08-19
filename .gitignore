@@ -53,8 +53,15 @@ tmp/
 # Local PostgreSQL data and database backups
 postgres-data/
 .postgres-data/
+backups/
+exports/
 *.backup
 *.dump
+*.dump.gz
+*.sql.gz
+.pgpass
+pgpass.conf
+.psql_history
 
 # Local Docker overrides
 compose.override.yaml
