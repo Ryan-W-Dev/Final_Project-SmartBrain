@@ -208,6 +208,15 @@ const ProfileImageEditor = ({ imageSrc, onUpdate }) => {
                 >
                   Use default image
                 </button>
+                <button
+                  className="profile-image-menu-link"
+                  disabled={isBusy}
+                  onClick={closeMenu}
+                  role="menuitem"
+                  type="button"
+                >
+                  Cancel
+                </button>
               </>
             ) : (
               <>

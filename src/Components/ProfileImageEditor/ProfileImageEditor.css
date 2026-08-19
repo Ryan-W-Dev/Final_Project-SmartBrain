@@ -190,13 +190,13 @@
   color: #047857;
 }
 
-@media (hover: none) {
-  .profile-image-toggle::before {
-    opacity: 0.35;
-  }
-
-  .profile-image-toggle span {
-    opacity: 1;
-    transform: none;
+@media (max-width: 680px), (hover: none) {
+  .profile-image-toggle::before,
+  .profile-image-toggle:hover::before,
+  .profile-image-toggle:focus-visible::before,
+  .profile-image-toggle span,
+  .profile-image-toggle:hover span,
+  .profile-image-toggle:focus-visible span {
+    opacity: 0;
   }
 }
